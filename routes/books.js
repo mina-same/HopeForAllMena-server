@@ -6,14 +6,14 @@ const {
   validateBookCreation, 
   validateBookUpdate, 
   validateBookId,
-  validatePagination 
+  validateBookPagination 
 } = require('../middleware/validation');
 
 // @route   GET /api/books
 // @desc    Get all books with pagination and filtering
 // @access  Public
 router.get('/', 
-  validatePagination,
+  validateBookPagination,
   bookController.getBooks
 );
 

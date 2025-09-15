@@ -430,7 +430,7 @@ class UserController {
         'books', 'courses', 'magazines', 'training', 'users', 'analytics', 'settings',
         'authors', 'categories', 'reviews', 'enrollments', 'contact-messages',
         'training-books', 'training-requests', 'training-followup-requests',
-        'calendar', 'user-management'
+        'calendar', 'user-management', 'generate-ids'
       ];
 
       const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));

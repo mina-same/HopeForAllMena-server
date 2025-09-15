@@ -11,9 +11,8 @@ const {
 
 // @route   GET /api/authors
 // @desc    Get all authors with pagination and filtering
-// @access  Private (Admin only)
+// @access  Public
 router.get('/', 
-  authenticate, 
   validatePagination,
   authorController.getAuthors
 );

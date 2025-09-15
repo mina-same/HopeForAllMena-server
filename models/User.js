@@ -62,7 +62,8 @@ const userSchema = new mongoose.Schema({
       'training-requests',
       'training-followup-requests',
       'calendar',
-      'user-management'
+      'user-management',
+      'generate-ids'
     ]
   }],
   status: {

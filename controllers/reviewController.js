@@ -206,10 +206,21 @@ class ReviewController {
         rating, 
         title, 
         content, 
-        verifiedPurchase = false 
+        verifiedPurchase = false,
+        guestName,
+        guestEmail
       } = req.body;
 
-      const userId = req.user._id;
+      // Handle both authenticated and guest users
+      const userId = req.user?._id;
+      const isGuestReview = !userId && guestName && guestEmail;
+
+      if (!userId && !isGuestReview) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Authentication required or guest information (name and email) must be provided'
+        });
+      }
 
       // Validate book exists
       const bookExists = await Book.findById(book);
@@ -220,38 +231,80 @@ class ReviewController {
         });
       }
 
-      // Check if user already reviewed this book
-      const existingReview = await Review.findOne({
-        book: book,
-        user: userId
-      });
-
-      if (existingReview) {
-        return res.status(400).json({
-          status: 'error',
-          message: 'You have already reviewed this book. You can only submit one review per book.',
-          field: 'book',
-          suggestion: 'You can edit your existing review instead'
+      // For authenticated users, check if they already reviewed this book
+      if (userId) {
+        const existingReview = await Review.findOne({
+          book: book,
+          user: userId
         });
+
+        if (existingReview) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'You have already reviewed this book. You can only submit one review per book.',
+            field: 'book',
+            suggestion: 'You can edit your existing review instead'
+          });
+        }
       }
 
-      // Create new review
-      const review = new Review({
+      // For guest reviews, check by email to prevent duplicates
+      if (isGuestReview) {
+        const existingGuestReview = await Review.findOne({
+          book: book,
+          user: null,
+          'guestInfo.email': guestEmail.toLowerCase()
+        });
+
+        if (existingGuestReview) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'A review from this email already exists for this book.',
+            field: 'email',
+            suggestion: 'Please use a different email or contact support to update your existing review'
+          });
+        }
+      }
+
+      // Create review data
+      const reviewData = {
         book,
-        user: userId,
         rating: parseInt(rating),
         title,
         content,
         verifiedPurchase,
         status: 'pending' // Reviews need moderation by default
-      });
+      };
 
+      // Add user or guest information
+      if (userId) {
+        reviewData.user = userId;
+      } else {
+        reviewData.user = null;
+        reviewData.guestInfo = {
+          name: guestName,
+          email: guestEmail.toLowerCase()
+        };
+      }
+
+      // Create new review
+      const review = new Review(reviewData);
       await review.save();
 
-      // Populate the review with book and user data
+      // Update book's average rating and total reviews count
+      const bookDoc = await Book.findById(book);
+      if (bookDoc) {
+        await bookDoc.updateAverageRating();
+      }
+
+      // Populate the review with book data
       await review.populate('book', 'title coverImageUrl author');
       await review.populate('book.author', 'name');
-      await review.populate('user', 'name username avatar');
+      
+      // Only populate user if it exists
+      if (userId) {
+        await review.populate('user', 'name username avatar');
+      }
 
       res.status(201).json({
         status: 'success',
@@ -337,6 +390,14 @@ class ReviewController {
        .populate('book.author', 'name')
        .populate('user', 'name username avatar');
 
+      // Update book's average rating if rating was changed
+      if (updateData.rating !== undefined) {
+        const bookDoc = await Book.findById(review.book);
+        if (bookDoc) {
+          await bookDoc.updateAverageRating();
+        }
+      }
+
       res.status(200).json({
         status: 'success',
         message: isOwner && !isAdmin ? 
@@ -383,8 +444,17 @@ class ReviewController {
         });
       }
 
+      // Get book ID before deleting review
+      const bookId = review.book;
+
       // Delete review
       await Review.findByIdAndDelete(reviewId);
+
+      // Update book's average rating and total reviews count after deletion
+      const bookDoc = await Book.findById(bookId);
+      if (bookDoc) {
+        await bookDoc.updateAverageRating();
+      }
 
       res.status(200).json({
         status: 'success',
@@ -424,6 +494,12 @@ class ReviewController {
 
       // Moderate the review
       await review.moderate(status, moderatorId, notes);
+
+      // Update book's average rating and total reviews count after moderation
+      const bookDoc = await Book.findById(review.book);
+      if (bookDoc) {
+        await bookDoc.updateAverageRating();
+      }
 
       // Populate the review with updated data
       await review.populate('book', 'title coverImageUrl author');
@@ -495,6 +571,7 @@ class ReviewController {
       const { 
         page = 1, 
         limit = 10, 
+        status,
         rating, 
         sortBy = 'createdAt', 
         sortOrder = 'desc' 
@@ -513,16 +590,26 @@ class ReviewController {
       const reviews = await Review.getReviewsByBook(bookId, {
         page: parseInt(page),
         limit: parseInt(limit),
+        status: status || 'approved',
         rating: rating ? parseInt(rating) : undefined,
         sortBy,
         sortOrder: sortOrder === 'asc' ? 1 : -1
       });
 
-      const total = await Review.countDocuments({ 
-        book: bookId, 
-        status: 'approved',
-        ...(rating ? { rating: parseInt(rating) } : {})
-      });
+      // Build count query to match the review query
+      const countQuery = { book: bookId };
+      if (status) {
+        if (status.includes(',')) {
+          countQuery.status = { $in: status.split(',').map(s => s.trim()) };
+        } else {
+          countQuery.status = status;
+        }
+      } else {
+        countQuery.status = 'approved';
+      }
+      if (rating) countQuery.rating = parseInt(rating);
+      
+      const total = await Review.countDocuments(countQuery);
 
       // Calculate pagination info
       const totalPages = Math.ceil(total / limit);

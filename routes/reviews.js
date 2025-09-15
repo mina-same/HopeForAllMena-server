@@ -63,9 +63,16 @@ router.get('/:id',
 
 // @route   POST /api/reviews
 // @desc    Create new review
-// @access  Private (Authenticated users)
+// @access  Public (Authenticated users or guests)
 router.post('/', 
-  authenticate, 
+  (req, res, next) => {
+    // Make authentication optional for review creation
+    if (req.headers.authorization) {
+      authenticate(req, res, next);
+    } else {
+      next();
+    }
+  },
   validateReviewCreation,
   reviewController.createReview
 );

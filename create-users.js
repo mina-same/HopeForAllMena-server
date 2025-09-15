@@ -32,7 +32,7 @@ async function createUsers() {
           'analytics', 'settings', 'authors', 'categories', 'reviews',
           'enrollments', 'contact-messages', 'training-books',
           'training-requests', 'training-followup-requests',
-          'calendar', 'user-management'
+          'calendar', 'user-management', 'generate-ids'
         ],
         status: 'active',
         emailVerified: true,

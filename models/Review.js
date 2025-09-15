@@ -9,7 +9,20 @@ const reviewSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'User is required']
+    required: false // Allow null for guest reviews
+  },
+  guestInfo: {
+    name: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Guest name cannot exceed 100 characters']
+    },
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+    }
   },
   rating: {
     type: Number,
@@ -72,8 +85,18 @@ reviewSchema.index({ rating: 1 });
 reviewSchema.index({ createdAt: -1 });
 reviewSchema.index({ helpful: -1 });
 
-// Compound index to ensure one review per user per book
-reviewSchema.index({ book: 1, user: 1 }, { unique: true });
+// Compound index to ensure one review per user per book (for authenticated users only)
+reviewSchema.index({ book: 1, user: 1 }, { 
+  unique: true, 
+  partialFilterExpression: { user: { $ne: null } } // Only apply to authenticated users
+});
+
+// Index for guest reviews to prevent duplicates by email
+reviewSchema.index({ book: 1, 'guestInfo.email': 1 }, { 
+  unique: true, 
+  sparse: true,
+  partialFilterExpression: { user: null }
+});
 
 // Virtual for helpful percentage
 reviewSchema.virtual('helpfulPercentage').get(function() {
@@ -108,12 +131,24 @@ reviewSchema.methods.markNotHelpful = function() {
 };
 
 // Method to moderate review
-reviewSchema.methods.moderate = function(status, moderatorId, notes = '') {
+reviewSchema.methods.moderate = async function(status, moderatorId, notes = '') {
   this.status = status;
   this.moderatedBy = moderatorId;
   this.moderatedAt = new Date();
   this.moderatorNotes = notes;
-  return this.save();
+  
+  await this.save();
+  
+  // Update book's average rating when review is approved or rejected
+  if (status === 'approved' || status === 'rejected') {
+    const Book = require('./Book');
+    const book = await Book.findById(this.book);
+    if (book) {
+      await book.updateAverageRating();
+    }
+  }
+  
+  return this;
 };
 
 // Static method to get review stats
@@ -157,7 +192,16 @@ reviewSchema.statics.getReviewsByBook = function(bookId, options = {}) {
     sortOrder = -1 
   } = options;
   
-  const query = { book: bookId, status };
+  const query = { book: bookId };
+  
+  // Handle multiple statuses (comma-separated)
+  if (status) {
+    if (status.includes(',')) {
+      query.status = { $in: status.split(',').map(s => s.trim()) };
+    } else {
+      query.status = status;
+    }
+  }
   
   if (rating) {
     query.rating = rating;
@@ -260,7 +304,22 @@ reviewSchema.statics.searchReviews = function(searchTerm, options = {}) {
     .limit(limit);
 };
 
-// Pre-save middleware to update book's average rating
+// Pre-save validation for guest reviews
+reviewSchema.pre('save', function(next) {
+  // If user is null, guestInfo must be provided
+  if (!this.user && (!this.guestInfo || !this.guestInfo.name || !this.guestInfo.email)) {
+    return next(new Error('Guest reviews must include name and email'));
+  }
+  
+  // If user is provided, guestInfo should not be set
+  if (this.user && this.guestInfo && (this.guestInfo.name || this.guestInfo.email)) {
+    this.guestInfo = undefined;
+  }
+  
+  next();
+});
+
+// Post-save middleware to update book's average rating
 reviewSchema.post('save', async function() {
   if (this.status === 'approved') {
     const Book = mongoose.model('Book');
@@ -271,7 +330,7 @@ reviewSchema.post('save', async function() {
   }
 });
 
-// Pre-remove middleware to update book's average rating
+// Post-remove middleware to update book's average rating
 reviewSchema.post('remove', async function() {
   const Book = mongoose.model('Book');
   const book = await Book.findById(this.book);

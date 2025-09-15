@@ -179,7 +179,7 @@ const validateUserCreation = [
         'books', 'courses', 'magazines', 'training', 'users', 'analytics', 'settings',
         'authors', 'categories', 'reviews', 'enrollments', 'contact-messages',
         'training-books', 'training-requests', 'training-followup-requests',
-        'calendar', 'user-management'
+        'calendar', 'user-management', 'generate-ids'
       ];
       
       const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
@@ -245,7 +245,7 @@ const validateUserUpdate = [
         'books', 'courses', 'magazines', 'training', 'users', 'analytics', 'settings',
         'authors', 'categories', 'reviews', 'enrollments', 'contact-messages',
         'training-books', 'training-requests', 'training-followup-requests',
-        'calendar', 'user-management'
+        'calendar', 'user-management', 'generate-ids'
       ];
       
       const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
@@ -325,6 +325,33 @@ const validatePagination = [
 
   query('sortBy')
     .optional()
+    .isIn(['name', 'email', 'username', 'role', 'status', 'createdAt', 'lastLogin', 'title', 'author', 'category', 'averageRating', 'totalSales', 'publicationYear'])
+    .withMessage('Invalid sort field'),
+
+  query('sortOrder')
+    .optional()
+    .isIn(['asc', 'desc', '1', '-1'])
+    .withMessage('Sort order must be asc, desc, 1, or -1'),
+
+  handleValidationErrors
+];
+
+// Separate validation for user endpoints
+const validateUserPagination = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer')
+    .toInt(),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100')
+    .toInt(),
+
+  query('sortBy')
+    .optional()
     .isIn(['name', 'email', 'username', 'role', 'status', 'createdAt', 'lastLogin'])
     .withMessage('Invalid sort field'),
 
@@ -337,6 +364,53 @@ const validatePagination = [
     .optional()
     .isIn(['active', 'inactive', 'suspended'])
     .withMessage('Status must be active, inactive, or suspended'),
+
+  handleValidationErrors
+];
+
+// Validation for book endpoints
+const validateBookPagination = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage('Page must be a positive integer')
+    .toInt(),
+
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 })
+    .withMessage('Limit must be between 1 and 100')
+    .toInt(),
+
+  query('sortBy')
+    .optional()
+    .isIn(['title', 'author', 'category', 'averageRating', 'totalSales', 'publicationYear', 'createdAt'])
+    .withMessage('Invalid sort field'),
+
+  query('sortOrder')
+    .optional()
+    .isIn(['asc', 'desc', '1', '-1'])
+    .withMessage('Sort order must be asc, desc, 1, or -1'),
+
+  query('status')
+    .optional()
+    .isIn(['published', 'not-published'])
+    .withMessage('Status must be published or not-published'),
+
+  query('category')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid category ID format'),
+
+  query('author')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid author ID format'),
+
+  query('minRating')
+    .optional()
+    .isFloat({ min: 0, max: 5 })
+    .withMessage('Minimum rating must be between 0 and 5'),
 
   handleValidationErrors
 ];
@@ -887,9 +961,18 @@ const validateContactMessageCreation = [
     .normalizeEmail(),
 
   body('phone')
-    .optional()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
-    .withMessage('Please provide a valid phone number'),
+    .optional({ nullable: true, checkFalsy: true })
+    .custom((value) => {
+      if (!value || value.trim() === '') {
+        return true; // Allow empty phone numbers
+      }
+      // Updated regex to accept Egyptian numbers and international format
+      // Accepts: 0120366281, +201203662810, +1234567890, etc.
+      if (!/^[\+]?[0-9][\d]{7,15}$/.test(value)) {
+        throw new Error('Please provide a valid phone number');
+      }
+      return true;
+    }),
 
   body('subject')
     .trim()
@@ -959,9 +1042,18 @@ const validateContactMessageUpdate = [
     .normalizeEmail(),
 
   body('phone')
-    .optional()
-    .matches(/^[\+]?[1-9][\d]{0,15}$/)
-    .withMessage('Please provide a valid phone number'),
+    .optional({ nullable: true, checkFalsy: true })
+    .custom((value) => {
+      if (!value || value.trim() === '') {
+        return true; // Allow empty phone numbers
+      }
+      // Updated regex to accept Egyptian numbers and international format
+      // Accepts: 0120366281, +201203662810, +1234567890, etc.
+      if (!/^[\+]?[0-9][\d]{7,15}$/.test(value)) {
+        throw new Error('Please provide a valid phone number');
+      }
+      return true;
+    }),
 
   body('subject')
     .optional()
@@ -1030,6 +1122,8 @@ module.exports = {
   validatePasswordChange,
   validateUserId,
   validatePagination,
+  validateUserPagination,
+  validateBookPagination,
   validateAuthorCreation,
   validateAuthorUpdate,
   validateAuthorId,

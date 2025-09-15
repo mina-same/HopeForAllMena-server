@@ -19,6 +19,10 @@ const trainingBookRoutes = require('./routes/trainingBooks');
 const trainingRequestRoutes = require('./routes/trainingRequests');
 const trainingFollowUpRoutes = require('./routes/trainingFollowUps');
 const uploadRoutes = require('./routes/upload');
+const eventRoutes = require('./routes/events');
+const courseRoutes = require('./routes/courses');
+const enrollmentRoutes = require('./routes/enrollments');
+const factCounterRoutes = require('./routes/factCounter');
 
 const app = express();
 
@@ -36,7 +40,10 @@ app.use('/api', limiter);
 // CORS configuration
 app.use(cors({
   origin: process.env.CLIENT_URL || ['http://localhost:8000', 'http://localhost:8001'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200
 }));
 
 // Body parsing middleware
@@ -77,6 +84,10 @@ app.use('/api/training-books', trainingBookRoutes);
 app.use('/api/training-requests', trainingRequestRoutes);
 app.use('/api/training-follow-ups', trainingFollowUpRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/fact-counter', factCounterRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -11,9 +11,8 @@ const {
 
 // @route   GET /api/categories
 // @desc    Get all categories with pagination and filtering
-// @access  Private (Admin only)
+// @access  Public
 router.get('/', 
-  authenticate, 
   validatePagination,
   categoryController.getCategories
 );
