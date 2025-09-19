@@ -23,6 +23,7 @@ const eventRoutes = require('./routes/events');
 const courseRoutes = require('./routes/courses');
 const enrollmentRoutes = require('./routes/enrollments');
 const factCounterRoutes = require('./routes/factCounter');
+const blogRoutes = require('./routes/blogRoutes');
 
 const app = express();
 
@@ -37,14 +38,45 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// CORS configuration
-app.use(cors({
-  origin: process.env.CLIENT_URL || ['http://localhost:8000', 'http://localhost:8001'],
+// CORS configuration - Enhanced for better compatibility
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:8000',
+      'http://localhost:8001',
+      'http://127.0.0.1:8000',
+      'http://127.0.0.1:8001'
+    ];
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  optionsSuccessStatus: 200
-}));
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control',
+    'X-HTTP-Method-Override'
+  ],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
+};
+
+app.use(cors(corsOptions));
+
+// Additional CORS handling for preflight requests
+app.options('*', cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -85,6 +117,7 @@ app.use('/api/training-requests', trainingRequestRoutes);
 app.use('/api/training-follow-ups', trainingFollowUpRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/blogs', blogRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/fact-counter', factCounterRoutes);

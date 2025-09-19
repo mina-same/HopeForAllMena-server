@@ -36,13 +36,15 @@ const magazineRequestSchema = new mongoose.Schema({
       required: [true, 'Magazine name is required'],
       trim: true,
       enum: [
-        'The Great Book, the Book of Hope',
+        'The Great Book',
         'The Book of Hope',
         'The Gift That Changes Everything',
-        'A Journey in the World of the Bible',
-        'The Bible for Children',
-        'The Path of Hope',
-        'On the Edge'
+        'Journey in the World of the Bible',
+        'The Bible',
+        'The Way of Hope',
+        'On the Edge',
+        'How the Shepherd Saved His Sheep',
+        'The Good Neighbor'
       ]
     },
     numberOfCopies: {
