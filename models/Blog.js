@@ -6,13 +6,24 @@ const blogSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  titleAr: {
+    type: String,
+    trim: true
+  },
   content: {
     type: String,
     required: true
   },
+  contentAr: {
+    type: String
+  },
   excerpt: {
     type: String,
     required: true,
+    maxlength: 200
+  },
+  excerptAr: {
+    type: String,
     maxlength: 200
   },
   image: {
@@ -30,6 +41,10 @@ const blogSchema = new mongoose.Schema({
     enum: ['news', 'events', 'updates', 'stories', 'announcements']
   },
   tags: [{
+    type: String,
+    trim: true
+  }],
+  tagsAr: [{
     type: String,
     trim: true
   }],

@@ -13,8 +13,11 @@ const getPublishedBlogs = async (req, res) => {
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
+        { titleAr: { $regex: search, $options: 'i' } },
         { excerpt: { $regex: search, $options: 'i' } },
-        { tags: { $in: [new RegExp(search, 'i')] } }
+        { excerptAr: { $regex: search, $options: 'i' } },
+        { tags: { $in: [new RegExp(search, 'i')] } },
+        { tagsAr: { $in: [new RegExp(search, 'i')] } }
       ];
     }
 
@@ -70,7 +73,9 @@ const getAllBlogs = async (req, res) => {
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
-        { excerpt: { $regex: search, $options: 'i' } }
+        { titleAr: { $regex: search, $options: 'i' } },
+        { excerpt: { $regex: search, $options: 'i' } },
+        { excerptAr: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -96,7 +101,7 @@ const getAllBlogs = async (req, res) => {
 // Create new blog (admin only)
 const createBlog = async (req, res) => {
   try {
-    const { title, content, excerpt, category, tags, status, featured } = req.body;
+    const { title, titleAr, content, contentAr, excerpt, excerptAr, category, tags, tagsAr, status, featured } = req.body;
     
     let imageUrl = '';
     if (req.file) {
@@ -112,12 +117,16 @@ const createBlog = async (req, res) => {
 
     const blog = new Blog({
       title,
+      titleAr,
       content,
+      contentAr,
       excerpt,
+      excerptAr,
       image: imageUrl,
       author: req.user.id,
       category,
       tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
+      tagsAr: tagsAr ? tagsAr.split(',').map(tag => tag.trim()) : [],
       status: status || 'draft',
       featured: featured || false
     });
@@ -134,7 +143,7 @@ const createBlog = async (req, res) => {
 // Update blog (admin only)
 const updateBlog = async (req, res) => {
   try {
-    const { title, content, excerpt, category, tags, status, featured } = req.body;
+    const { title, titleAr, content, contentAr, excerpt, excerptAr, category, tags, tagsAr, status, featured } = req.body;
     const blog = await Blog.findById(req.params.id);
 
     if (!blog) {
@@ -154,11 +163,15 @@ const updateBlog = async (req, res) => {
     }
 
     blog.title = title || blog.title;
+    blog.titleAr = titleAr || blog.titleAr;
     blog.content = content || blog.content;
+    blog.contentAr = contentAr || blog.contentAr;
     blog.excerpt = excerpt || blog.excerpt;
+    blog.excerptAr = excerptAr || blog.excerptAr;
     blog.image = imageUrl;
     blog.category = category || blog.category;
     blog.tags = tags ? tags.split(',').map(tag => tag.trim()) : blog.tags;
+    blog.tagsAr = tagsAr ? tagsAr.split(',').map(tag => tag.trim()) : blog.tagsAr;
     blog.status = status || blog.status;
     blog.featured = featured !== undefined ? featured : blog.featured;
 

@@ -259,7 +259,10 @@ bookSchema.statics.searchBooks = function(searchTerm, options = {}) {
   const sort = { [sortBy]: sortOrder };
   
   return this.find(query)
-    .populate('author', 'name avatarUrl')
+    .populate({
+      path: 'author',
+      select: 'name nameAr avatarUrl biography biographyAr'
+    })
     .populate('category', 'name slug color')
     .sort(sort)
     .skip(skip)
@@ -271,7 +274,10 @@ bookSchema.statics.getRecentBooks = function(limit = 10) {
   return this.find({ 
     status: 'published'
   })
-    .populate('author', 'name avatarUrl')
+    .populate({
+      path: 'author',
+      select: 'name nameAr avatarUrl biography biographyAr'
+    })
     .populate('category', 'name slug color')
     .sort({ publicationYear: -1, createdAt: -1 })
     .limit(limit);

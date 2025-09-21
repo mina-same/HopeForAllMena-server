@@ -43,13 +43,24 @@ class BookController {
       // Get books with pagination
       const [books, total] = await Promise.all([
         Book.find(query)
-          .populate('author', 'name avatarUrl')
+          .populate({
+            path: 'author',
+            select: 'name nameAr avatarUrl biography biographyAr'
+          })
           .populate('category', 'name_en name_ar slug color')
           .sort(sortObj)
           .skip(skip)
           .limit(parseInt(limit)),
         Book.countDocuments(query)
       ]);
+
+      // Debug: Log the first book's author to check if nameAr is populated
+      if (books.length > 0 && books[0].author) {
+        console.log('=== SERVER DEBUG: First Book Author ===');
+        console.log('Author Object:', books[0].author);
+        console.log('Author nameAr:', books[0].author.nameAr);
+        console.log('Author Keys:', Object.keys(books[0].author.toObject ? books[0].author.toObject() : books[0].author));
+      }
 
       // Calculate pagination info
       const totalPages = Math.ceil(total / limit);
@@ -95,7 +106,7 @@ class BookController {
 
       // Get top books by sales
       const topSellingBooks = await Book.find({ status: 'published' })
-        .populate('author', 'name')
+        .populate('author', 'name nameAr')
         .populate('category', 'name_en name_ar')
         .sort({ totalSales: -1 })
         .limit(5)
@@ -106,7 +117,7 @@ class BookController {
         status: 'published',
         averageRating: { $gte: 4.0 }
       })
-        .populate('author', 'name')
+        .populate('author', 'name nameAr')
         .populate('category', 'name_en name_ar')
         .sort({ averageRating: -1 })
         .limit(5)
@@ -135,7 +146,7 @@ class BookController {
   async getBookById(req, res) {
     try {
       const book = await Book.findById(req.params.id)
-        .populate('author', 'name biography avatarUrl website socialMedia')
+        .populate('author', 'name nameAr biography biographyAr avatarUrl website socialMedia')
         .populate('category', 'name_en name_ar slug description_en description_ar color');
       
       if (!book) {
@@ -254,7 +265,7 @@ class BookController {
       await book.save();
 
       // Populate the book with author and category data
-      await book.populate('author', 'name avatarUrl');
+      await book.populate('author', 'name nameAr avatarUrl');
       await book.populate('category', 'name_en name_ar slug color');
 
       // Update author's books count
@@ -405,7 +416,7 @@ class BookController {
         bookId,
         updateData,
         { new: true, runValidators: true }
-      ).populate('author', 'name avatarUrl').populate('category', 'name_en name_ar slug color');
+      ).populate('author', 'name nameAr avatarUrl').populate('category', 'name_en name_ar slug color');
 
       // Update author and category stats if changed
       if (author && author !== book.author.toString()) {
@@ -506,7 +517,7 @@ class BookController {
         bookId,
         { status },
         { new: true, runValidators: true }
-      ).populate('author', 'name avatarUrl').populate('category', 'name_en name_ar slug color');
+      ).populate('author', 'name nameAr avatarUrl').populate('category', 'name_en name_ar slug color');
 
       if (!book) {
         return res.status(404).json({
@@ -545,7 +556,7 @@ class BookController {
       const { limit = 10 } = req.query;
 
       const books = await Book.find({ status: 'published' })
-        .populate('author', 'name avatarUrl')
+        .populate('author', 'name nameAr avatarUrl')
         .populate('category', 'name_en name_ar slug color')
         .sort({ createdAt: -1 })
         .limit(parseInt(limit));
@@ -584,7 +595,7 @@ class BookController {
 
       // Refresh book data
       const updatedBook = await Book.findById(bookId)
-        .populate('author', 'name avatarUrl')
+        .populate('author', 'name nameAr avatarUrl')
         .populate('category', 'name_en name_ar slug color');
 
       res.status(200).json({
