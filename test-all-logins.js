@@ -3,9 +3,9 @@ const axios = require('axios');
 const API_URL = 'http://localhost:5001/api';
 
 const users = [
-  { email: 'admin@azino.com', password: 'Admin@2024', role: 'admin' },
-  { email: 'editor@azino.com', password: 'Editor@2024', role: 'editor' },
-  { email: 'user@azino.com', password: 'User@2024', role: 'user' }
+  { email: 'admin@hopeforallmena.com', password: 'Admin@2024', role: 'admin' },
+  { email: 'editor@hopeforallmena.com', password: 'Editor@2024', role: 'editor' },
+  { email: 'user@hopeforallmena.com', password: 'User@2024', role: 'user' }
 ];
 
 async function testAllLogins() {

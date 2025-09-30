@@ -1,5 +1,5 @@
 {
-  "name": "azino-server",
+  "name": "hope-for-all-mena-server",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
@@ -13,9 +13,9 @@
     "bookstore",
     "user-management"
   ],
-  "author": "Azino Publishing House",
+  "author": "Hope for All Mena Publishing House",
   "license": "ISC",
-  "description": "Backend API for Azino Publishing House Management System",
+  "description": "Backend server for Hope for All Mena charity platform",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.7.0",
