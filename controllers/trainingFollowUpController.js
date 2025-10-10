@@ -2,16 +2,8 @@ const TrainingFollowUp = require('../models/TrainingFollowUp');
 const multer = require('multer');
 const path = require('path');
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/training-followup/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configure multer for memory storage (Vercel compatible)
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -29,6 +21,31 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   }
 });
+
+// Cloudinary configuration
+const cloudinary = require('../config/cloudinary');
+
+// Upload file to Cloudinary
+const uploadToCloudinary = async (buffer, originalname, mimetype) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: 'auto',
+        folder: 'training-followup',
+        public_id: `followup_${Date.now()}_${originalname.split('.')[0]}`,
+        format: path.extname(originalname).slice(1) || 'pdf'
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+    uploadStream.end(buffer);
+  });
+};
 
 // Get all training follow-ups (Admin only)
 const getAllTrainingFollowUps = async (req, res) => {
@@ -116,13 +133,24 @@ const createTrainingFollowUp = async (req, res) => {
 
     // Handle file upload if present
     if (req.file) {
-      followUpData.servedListFile = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path
-      };
+      try {
+        const cloudinaryResult = await uploadToCloudinary(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
+        
+        followUpData.servedListFile = {
+          filename: cloudinaryResult.public_id,
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          url: cloudinaryResult.secure_url,
+          cloudinaryId: cloudinaryResult.public_id
+        };
+      } catch (uploadError) {
+        return res.status(500).json({ message: 'File upload failed', error: uploadError.message });
+      }
     }
 
     const trainingFollowUp = new TrainingFollowUp(followUpData);
@@ -217,13 +245,24 @@ const updateTrainingFollowUp = async (req, res) => {
 
     // Handle file upload if present
     if (req.file) {
-      updateData.servedListFile = {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-        path: req.file.path
-      };
+      try {
+        const cloudinaryResult = await uploadToCloudinary(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype
+        );
+        
+        updateData.servedListFile = {
+          filename: cloudinaryResult.public_id,
+          originalName: req.file.originalname,
+          mimetype: req.file.mimetype,
+          size: req.file.size,
+          url: cloudinaryResult.secure_url,
+          cloudinaryId: cloudinaryResult.public_id
+        };
+      } catch (uploadError) {
+        return res.status(500).json({ message: 'File upload failed', error: uploadError.message });
+      }
     }
 
     // Remove undefined values
@@ -336,8 +375,8 @@ const downloadServedListFile = async (req, res) => {
       return res.status(404).json({ message: 'No file found for this follow-up request' });
     }
 
-    const filePath = path.join(__dirname, '..', followUp.servedListFile.path);
-    res.download(filePath, followUp.servedListFile.originalName);
+    // Redirect to Cloudinary URL for download
+    res.redirect(followUp.servedListFile.url);
   } catch (error) {
     res.status(500).json({ message: 'Error downloading file', error: error.message });
   }

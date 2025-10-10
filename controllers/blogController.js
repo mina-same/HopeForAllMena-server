@@ -105,12 +105,21 @@ const createBlog = async (req, res) => {
     
     let imageUrl = '';
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'blogs',
-        transformation: [
-          { width: 800, height: 600, crop: 'fill' },
-          { quality: 'auto' }
-        ]
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'blogs',
+            transformation: [
+              { width: 800, height: 600, crop: 'fill' },
+              { quality: 'auto' }
+            ]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(req.file.buffer);
       });
       imageUrl = result.secure_url;
     }
@@ -152,12 +161,21 @@ const updateBlog = async (req, res) => {
 
     let imageUrl = blog.image;
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'blogs',
-        transformation: [
-          { width: 800, height: 600, crop: 'fill' },
-          { quality: 'auto' }
-        ]
+      const result = await new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'blogs',
+            transformation: [
+              { width: 800, height: 600, crop: 'fill' },
+              { quality: 'auto' }
+            ]
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        );
+        uploadStream.end(req.file.buffer);
       });
       imageUrl = result.secure_url;
     }

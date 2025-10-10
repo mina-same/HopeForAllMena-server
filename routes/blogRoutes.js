@@ -27,9 +27,9 @@ const {
 
 const router = express.Router();
 
-// Configure multer for file uploads
+// Configure multer for memory storage (Vercel compatible)
 const upload = multer({
-  dest: 'uploads/',
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },

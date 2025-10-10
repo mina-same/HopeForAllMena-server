@@ -94,9 +94,8 @@ blogSchema.pre('save', function(next) {
   next();
 });
 
-// Index for better query performance
+// Index for better query performance (slug already has unique index from schema)
 blogSchema.index({ status: 1, publishedAt: -1 });
 blogSchema.index({ category: 1, status: 1 });
-blogSchema.index({ slug: 1 });
 
 module.exports = mongoose.model('Blog', blogSchema);
