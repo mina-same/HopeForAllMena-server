@@ -1,5 +1,7 @@
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
+const { sessionUtils } = require('../config/session');
+const { cookieUtils } = require('../utils/cookies');
 
 class AuthController {
   // Login user
@@ -17,13 +19,7 @@ class AuthController {
         });
       }
 
-      // Check if account is locked
-      if (user.isLocked) {
-        return res.status(423).json({
-          status: 'error',
-          message: 'Account is temporarily locked due to too many failed login attempts. Please try again later.'
-        });
-      }
+      // Account locking disabled - users can try anytime
 
       // Check if user is active
       if (user.status !== 'active') {
@@ -37,8 +33,7 @@ class AuthController {
       const isPasswordValid = await user.comparePassword(password);
 
       if (!isPasswordValid) {
-        // Increment login attempts
-        await user.incLoginAttempts();
+        // No login attempt tracking - users can try anytime
         
         return res.status(401).json({
           status: 'error',
@@ -46,16 +41,19 @@ class AuthController {
         });
       }
 
-      // Reset login attempts on successful login
-      if (user.loginAttempts > 0) {
-        await user.resetLoginAttempts();
-      }
+      // No login attempt tracking needed
 
       // Update last login
       await user.updateLastLogin();
 
       // Generate JWT token
       const token = generateToken(user._id);
+
+      // Create session
+      await sessionUtils.createUserSession(req, user);
+
+      // Set authentication cookies
+      cookieUtils.setAuthCookies(res, token);
 
       // Remove sensitive data from user object
       const userResponse = user.toJSON();
@@ -67,7 +65,8 @@ class AuthController {
         data: {
           user: userResponse,
           token,
-          expiresIn: process.env.JWT_EXPIRE || '7d'
+          expiresIn: process.env.JWT_EXPIRE || '7d',
+          sessionId: req.sessionID
         }
       });
 
@@ -83,8 +82,11 @@ class AuthController {
   // Logout user
   async logout(req, res) {
     try {
-      // In a more advanced implementation, you might want to blacklist the token
-      // For now, we'll just send a success response as the client will remove the token
+      // Destroy session
+      await sessionUtils.destroyUserSession(req);
+      
+      // Clear authentication cookies
+      cookieUtils.clearAuthCookies(res);
       
       res.status(200).json({
         status: 'success',

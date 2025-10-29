@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const { sessionUtils } = require('../config/session');
+const { cookieUtils } = require('../utils/cookies');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -8,20 +10,36 @@ const generateToken = (userId) => {
   });
 };
 
-// Verify JWT token middleware
+// Enhanced authentication middleware supporting multiple methods
 const authenticate = async (req, res, next) => {
   try {
     let token;
+    let user = null;
 
-    // Check for token in Authorization header
+    // Method 1: Check for session authentication
+    if (sessionUtils.isAuthenticated(req)) {
+      const userId = sessionUtils.getUserId(req);
+      user = await User.findById(userId);
+      if (user) {
+        req.user = user;
+        return next();
+      }
+    }
+
+    // Method 2: Check for token in Authorization header
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
+    }
+
+    // Method 3: Check for token in cookies
+    if (!token) {
+      token = cookieUtils.getAuthToken(req);
     }
 
     if (!token) {
       return res.status(401).json({
         status: 'error',
-        message: 'Access denied. No token provided.'
+        message: 'Access denied. No authentication provided.'
       });
     }
 
@@ -29,7 +47,7 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
     // Get user from database
-    const user = await User.findById(decoded.userId);
+    user = await User.findById(decoded.userId);
     
     if (!user) {
       return res.status(401).json({

@@ -32,7 +32,7 @@ async function createUsers() {
           'analytics', 'settings', 'authors', 'categories', 'reviews',
           'enrollments', 'contact-messages', 'training-books',
           'training-requests', 'training-followup-requests',
-          'calendar', 'user-management', 'generate-ids'
+          'calendar', 'user-management', 'generate-ids', 'blogs'
         ],
         status: 'active',
         emailVerified: true,
@@ -46,7 +46,7 @@ async function createUsers() {
         username: 'editor',
         password: await bcrypt.hash('Editor@2024', salt),
         role: 'editor',
-        permissions: ['books', 'authors', 'categories', 'reviews', 'magazines'],
+        permissions: ['books', 'authors', 'categories', 'reviews', 'magazines', 'blogs'],
         status: 'active',
         emailVerified: true,
         loginAttempts: 0,

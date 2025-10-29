@@ -4,6 +4,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const { createSessionMiddleware } = require('./config/session');
+const { createCookieParser } = require('./utils/cookies');
 require('dotenv').config();
 
 // Import routes
@@ -30,10 +32,10 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
-// Rate limiting
+// Rate limiting - More lenient for development
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit for development
   message: 'Too many requests from this IP, please try again later.'
 });
 app.use('/api', limiter);
@@ -48,10 +50,17 @@ const corsOptions = {
       'http://localhost:8000',
       'http://localhost:8001',
       'http://127.0.0.1:8000',
-      'http://127.0.0.1:8001'
+      'http://127.0.0.1:8001',
+      'https://hope-for-all-mena-client.vercel.app',
+      'https://hope2allmena-server.vercel.app'
     ];
     
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // In development, allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -82,6 +91,12 @@ app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Cookie parsing middleware
+app.use(createCookieParser());
+
+// Session middleware
+app.use(createSessionMiddleware());
+
 // Static file serving for uploads
 app.use('/uploads', express.static('uploads'));
 
@@ -90,8 +105,6 @@ app.use(morgan('combined'));
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   dbName: process.env.DB_NAME || 'azino_publishing'
 })
 .then(() => {
@@ -153,8 +166,34 @@ app.use((error, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM received, shutting down gracefully');
+  mongoose.connection.close(() => {
+    console.log('📊 MongoDB connection closed');
+    process.exit(0);
+  });
+});
+
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+});
+
+// Handle server errors
+server.on('error', (error) => {
+  console.error('❌ Server error:', error);
 });

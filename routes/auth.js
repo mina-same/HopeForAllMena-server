@@ -9,7 +9,6 @@ const router = express.Router();
 // @desc    Login user
 // @access  Public
 router.post('/login', 
-  sensitiveOperationLimit(5, 15 * 60 * 1000), // 5 attempts per 15 minutes
   validateLogin,
   authController.login
 );

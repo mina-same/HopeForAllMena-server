@@ -70,7 +70,6 @@ const blogSchema = new mongoose.Schema({
   },
   slug: {
     type: String,
-    unique: true,
     required: true
   }
 }, {
@@ -94,7 +93,8 @@ blogSchema.pre('save', function(next) {
   next();
 });
 
-// Index for better query performance (slug already has unique index from schema)
+// Index for better query performance
+blogSchema.index({ slug: 1 }, { unique: true });
 blogSchema.index({ status: 1, publishedAt: -1 });
 blogSchema.index({ category: 1, status: 1 });
 
