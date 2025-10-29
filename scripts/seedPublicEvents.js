@@ -99,6 +99,52 @@ const publicEvents = [
     },
     
     views: 0
+  },
+  {
+    // Basic Information
+    title: 'Christmas Family Festival 2025',
+    title_ar: 'مهرجان عائلة الميلاد 2025',
+    description: 'Celebrate the joy of Christmas with your family at our annual festival! Experience the true spirit of the season with live nativity scenes, carol singing, children\'s performances, festive food, games, and a special visit from Santa. This family-friendly event welcomes all ages and promises a memorable celebration of love, joy, and togetherness.',
+    description_ar: 'احتفل بفرحة عيد الميلاد مع عائلتك في مهرجاننا السنوي! اختبر الروح الحقيقية للموسم مع مشاهد الميلاد الحية وترانيم عيد الميلاد وعروض الأطفال والطعام الاحتفالي والألعاب وزيارة خاصة من بابا نويل. هذا الحدث العائلي يرحب بجميع الأعمار ويعد باحتفال لا يُنسى بالحب والفرح والوحدة.',
+    
+    // Address & Location
+    address: 'Community Park, 789 Festival Avenue, Cairo, Egypt',
+    address_ar: 'حديقة المجتمع، 789 شارع المهرجان، القاهرة، مصر',
+    location: '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d13656.58527873854!2d29.89308985!3d31.161214649999998!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x14f5c3a9e9f53887%3A0x14f4c1a88359282c!2z2YPYp9iq2K/Ysdin2KbZitipINin2YTYs9mK2K_YqSDYp9mE2LnYsNix2KfYoSDZiNin2YTYo9mG2KjYpyDZg9in2LHYp9izINio2LTYp9mK2LEg2KfZhNiu2YrYsSAz!5e0!3m2!1sar!2seg!4v1761751690165!5m2!1sar!2seg" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+    
+    // Date & Time
+    start: new Date('2025-12-23T15:00:00'),
+    end: new Date('2025-12-23T20:00:00'),
+    
+    // Category & Status
+    category: 'conference',
+    status: 'confirmed',
+    color: 'azure',
+    
+    // Public Event Settings
+    isPublic: true,
+    isFeatured: true,
+    slug: 'christmas-family-festival-2025',
+    image: 'https://images.unsplash.com/photo-1512389142860-9c449e58a543?w=800',
+    
+    // Contact Information
+    contactInfo: {
+      email: 'events@hopeforallmena.org',
+      phone: '+20-111-222-3333',
+      whatsapp: '+20-111-222-3333',
+      facebook: 'https://facebook.com/hopeforallmena',
+      instagram: 'https://instagram.com/hopeforallmena'
+    },
+    
+    // Organizer Information
+    organizer: {
+      name: 'Hope for All MENA Ministry',
+      name_ar: 'خدمة الرجاء للجميع الشرق الأوسط وشمال أفريقيا',
+      email: 'ministry@hopeforallmena.org',
+      phone: '+20-111-222-3333'
+    },
+    
+    views: 0
   }
 ];
 
