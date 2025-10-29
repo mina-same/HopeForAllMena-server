@@ -31,15 +31,25 @@ const eventSchema = new mongoose.Schema({
     enum: ['default', 'green', 'red', 'azure', 'warning'],
     default: 'default'
   },
+  address: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'Address cannot exceed 300 characters']
+  },
   location: {
     type: String,
     trim: true,
-    maxlength: [200, 'Location cannot exceed 200 characters']
+    maxlength: [1500, 'Location URL cannot exceed 1500 characters']
   },
   organizer: {
-    type: String,
-    trim: true,
-    maxlength: [100, 'Organizer name cannot exceed 100 characters']
+    name: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Organizer name cannot exceed 100 characters']
+    },
+    name_ar: String,
+    email: String,
+    phone: String
   },
   participants: {
     type: Number,
@@ -53,12 +63,61 @@ const eventSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ['meeting', 'training', 'workshop', 'conference', 'personal', 'other'],
+    enum: ['meeting', 'training',"sunday-school", 'workshop', 'conference', 'personal', 'other'],
     default: 'other'
   },
   isAllDay: {
     type: Boolean,
     default: false
+  },
+  // Public Event Fields (optional - only needed when isPublic: true)
+  title_ar: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Arabic title cannot exceed 200 characters']
+  },
+  description_ar: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Arabic description cannot exceed 2000 characters']
+  },
+  address_ar: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'Arabic address cannot exceed 300 characters']
+  },
+  slug: {
+    type: String,
+    unique: true,
+    sparse: true, // allows null values, only unique when present
+    lowercase: true,
+    trim: true
+  },
+  image: {
+    type: String,
+    default: ''
+  },
+  imagePublicId: {
+    type: String // Cloudinary public ID for deletion
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
+  },
+  isPublic: {
+    type: Boolean,
+    default: false // Default to internal calendar event
+  },
+  contactInfo: {
+    email: String,
+    phone: String,
+    whatsapp: String,
+    facebook: String,
+    instagram: String
+  },
+  views: {
+    type: Number,
+    default: 0
   },
   recurring: {
     type: {
@@ -110,6 +169,9 @@ eventSchema.index({ start: 1, end: 1 });
 eventSchema.index({ createdBy: 1 });
 eventSchema.index({ status: 1 });
 eventSchema.index({ category: 1 });
+eventSchema.index({ slug: 1 });
+eventSchema.index({ isPublic: 1, isFeatured: 1 });
+eventSchema.index({ isPublic: 1, start: 1 });
 
 // Virtual for event duration
 eventSchema.virtual('duration').get(function() {
@@ -130,6 +192,15 @@ eventSchema.pre('save', function(next) {
       return next(new Error('End date must be after start date'));
     }
   }
+  
+  // Auto-generate slug for public events if not provided
+  if (this.isPublic && !this.slug && this.title) {
+    this.slug = this.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  
   next();
 });
 
@@ -152,6 +223,37 @@ eventSchema.statics.getEventsByDateRange = function(startDate, endDate) {
       { start: { $lte: startDate }, end: { $gte: endDate } }
     ]
   }).sort({ start: 1 });
+};
+
+// Get public events (for website display)
+eventSchema.statics.getPublicEvents = function(filters = {}) {
+  const query = {
+    isPublic: true,
+    status: { $in: ['scheduled', 'confirmed'] }
+  };
+  
+  if (filters.category) query.category = filters.category;
+  if (filters.isFeatured !== undefined) query.isFeatured = filters.isFeatured;
+  
+  return this.find(query).sort({ start: 1 });
+};
+
+// Get featured events (for homepage)
+eventSchema.statics.getFeaturedEvents = function(limit = 3) {
+  return this.find({
+    isPublic: true,
+    isFeatured: true,
+    status: { $in: ['scheduled', 'confirmed'] },
+    start: { $gte: new Date() }
+  })
+  .sort({ start: 1 })
+  .limit(limit);
+};
+
+// Get event by slug
+eventSchema.statics.getBySlug = function(slug) {
+  return this.findOne({ slug, isPublic: true })
+    .populate('createdBy', 'name email');
 };
 
 // Instance methods

@@ -9,7 +9,8 @@ const getFactCounterStats = async (req, res) => {
     res.json({
       success: true,
       data: {
-        members: stats.members,
+        countries: stats.countries || stats.members || 0,
+        members: stats.members, // Keep for backward compatibility
         leadersTraining: stats.leadersTraining,
         publishedBooks: stats.publishedBooks,
         givenMagazines: stats.givenMagazines,
@@ -48,11 +49,12 @@ const updateFactCounterStats = async (req, res) => {
       });
     }
 
-    const { members, leadersTraining, publishedBooks, givenMagazines } = req.body;
+    const { countries, members, leadersTraining, publishedBooks, givenMagazines } = req.body;
     const userId = req.user._id;
 
     // Prepare updates object (only include provided fields)
     const updates = {};
+    if (countries !== undefined) updates.countries = parseInt(countries);
     if (members !== undefined) updates.members = parseInt(members);
     if (leadersTraining !== undefined) updates.leadersTraining = parseInt(leadersTraining);
     if (publishedBooks !== undefined) updates.publishedBooks = parseInt(publishedBooks);
@@ -65,7 +67,8 @@ const updateFactCounterStats = async (req, res) => {
       success: true,
       message: 'Statistics updated successfully',
       data: {
-        members: updatedStats.members,
+        countries: updatedStats.countries || updatedStats.members || 0,
+        members: updatedStats.members, // Keep for backward compatibility
         leadersTraining: updatedStats.leadersTraining,
         publishedBooks: updatedStats.publishedBooks,
         givenMagazines: updatedStats.givenMagazines,
@@ -99,11 +102,13 @@ const getFactCounterHistory = async (req, res) => {
       
       // Generate realistic growth patterns
       const growthFactor = (monthsCount - i) / monthsCount;
+      const currentCountries = currentStats.countries || currentStats.members || 0;
       
       history.push({
         month: date.toISOString().slice(0, 7), // YYYY-MM format
         monthName: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        members: Math.floor(currentStats.members * (0.7 + growthFactor * 0.3) + Math.random() * 200),
+        countries: Math.floor(currentCountries * (0.7 + growthFactor * 0.3) + Math.random() * 5),
+        members: Math.floor((currentStats.members || 0) * (0.7 + growthFactor * 0.3) + Math.random() * 200),
         leadersTraining: Math.floor(currentStats.leadersTraining * (0.6 + growthFactor * 0.4) + Math.random() * 30),
         publishedBooks: Math.floor(currentStats.publishedBooks * (0.5 + growthFactor * 0.5) + Math.random() * 5),
         givenMagazines: Math.floor(currentStats.givenMagazines * (0.6 + growthFactor * 0.4) + Math.random() * 500)
@@ -113,7 +118,8 @@ const getFactCounterHistory = async (req, res) => {
     // Ensure the last month matches current totals
     if (history.length > 0) {
       const lastMonth = history[history.length - 1];
-      lastMonth.members = currentStats.members;
+      lastMonth.countries = currentStats.countries || currentStats.members || 0;
+      lastMonth.members = currentStats.members || 0;
       lastMonth.leadersTraining = currentStats.leadersTraining;
       lastMonth.publishedBooks = currentStats.publishedBooks;
       lastMonth.givenMagazines = currentStats.givenMagazines;
@@ -123,7 +129,8 @@ const getFactCounterHistory = async (req, res) => {
       success: true,
       data: {
         current: {
-          members: currentStats.members,
+          countries: currentStats.countries || currentStats.members || 0,
+          members: currentStats.members || 0,
           leadersTraining: currentStats.leadersTraining,
           publishedBooks: currentStats.publishedBooks,
           givenMagazines: currentStats.givenMagazines,

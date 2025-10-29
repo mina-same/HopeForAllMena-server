@@ -322,10 +322,34 @@ const getMagazineRequestStatistics = async (req, res) => {
       { $limit: 5 }
     ]);
 
+    // Calculate total magazines approved/fulfilled
+    const approvedMagazines = await MagazineRequest.aggregate([
+      {
+        $match: {
+          status: { $in: ['approved', 'fulfilled'] }
+        }
+      },
+      {
+        $unwind: '$magazines'
+      },
+      {
+        $group: {
+          _id: null,
+          totalCopiesApproved: { $sum: '$magazines.numberOfCopies' },
+          approvedCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const totalCopiesApproved = approvedMagazines.length > 0 ? approvedMagazines[0].totalCopiesApproved : 0;
+    const approvedCount = await MagazineRequest.countDocuments({ status: { $in: ['approved', 'fulfilled'] } });
+
     res.json({
       success: true,
       data: {
         ...stats,
+        totalCopiesApproved,
+        approvedCount,
         recentRequests,
         popularMagazines
       }

@@ -9,7 +9,10 @@ const {
   deleteEvent,
   getUpcomingEvents,
   getEventsByDateRange,
-  getEventStats
+  getEventStats,
+  getPublicEvents,
+  getFeaturedEvents,
+  getEventBySlug
 } = require('../controllers/eventController');
 const { authenticate } = require('../middleware/auth');
 
@@ -66,11 +69,13 @@ const eventValidation = [
     .withMessage('isAllDay must be a boolean value')
 ];
 
-// Public routes (read-only)
-router.get('/public', getAllEvents);
+// Public routes (read-only) - for website display
+router.get('/public', getPublicEvents);
+router.get('/public/featured', getFeaturedEvents);
 router.get('/public/upcoming', getUpcomingEvents);
 router.get('/public/date-range', getEventsByDateRange);
 router.get('/public/stats', getEventStats);
+router.get('/public/slug/:slug', getEventBySlug);
 router.get('/public/:id', getEvent);
 
 // Protected routes (require authentication)

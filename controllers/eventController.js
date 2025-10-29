@@ -354,3 +354,98 @@ exports.getEventStats = async (req, res) => {
     });
   }
 };
+
+// Get public events (for website display)
+exports.getPublicEvents = async (req, res) => {
+  try {
+    const { 
+      category, 
+      isFeatured,
+      page = 1, 
+      limit = 10 
+    } = req.query;
+
+    const filters = {};
+    if (category) filters.category = category;
+    if (isFeatured !== undefined) filters.isFeatured = isFeatured === 'true';
+
+    const query = {
+      isPublic: true,
+      status: { $in: ['scheduled', 'confirmed'] },
+      ...filters
+    };
+
+    const events = await Event.find(query)
+      .select('-createdBy -updatedBy -reminders -attachments')
+      .sort({ start: 1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const total = await Event.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      count: events.length,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit),
+      data: events
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching public events',
+      error: error.message
+    });
+  }
+};
+
+// Get featured events (for homepage)
+exports.getFeaturedEvents = async (req, res) => {
+  try {
+    const { limit = 3 } = req.query;
+    
+    const events = await Event.getFeaturedEvents(parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      count: events.length,
+      data: events
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching featured events',
+      error: error.message
+    });
+  }
+};
+
+// Get event by slug (for event details page)
+exports.getEventBySlug = async (req, res) => {
+  try {
+    const event = await Event.getBySlug(req.params.slug);
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found'
+      });
+    }
+
+    // Increment views
+    event.views = (event.views || 0) + 1;
+    await event.save();
+
+    res.status(200).json({
+      success: true,
+      data: event
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching event',
+      error: error.message
+    });
+  }
+};

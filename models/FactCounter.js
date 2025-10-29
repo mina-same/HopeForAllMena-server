@@ -1,9 +1,14 @@
 const mongoose = require('mongoose');
 
 const factCounterSchema = new mongoose.Schema({
-  members: {
+  countries: {
     type: Number,
     required: true,
+    default: 45
+  },
+  members: {
+    type: Number,
+    required: false,
     default: 8860
   },
   leadersTraining: {
