@@ -161,6 +161,45 @@ const uploadTrainingBookCover = async (req, res) => {
   }
 };
 
+// Upload course image
+const uploadCourseImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: 'azino/courses',
+      public_id: `course_${Date.now()}`,
+      transformation: [
+        { width: 1200, height: 675, crop: 'fill' },
+        { quality: 'auto', fetch_format: 'auto' }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Course image uploaded successfully',
+      data: {
+        url: result.secure_url,
+        public_id: result.public_id,
+        width: result.width,
+        height: result.height
+      }
+    });
+  } catch (error) {
+    console.error('Course image upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload course image',
+      error: error.message
+    });
+  }
+};
+
 // Delete image from Cloudinary
 const deleteImage = async (req, res) => {
   try {
@@ -195,5 +234,6 @@ module.exports = {
   uploadAuthorImage,
   uploadBookCover,
   uploadTrainingBookCover,
+  uploadCourseImage,
   deleteImage
 };

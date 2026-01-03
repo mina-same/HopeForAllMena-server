@@ -17,6 +17,32 @@ const enrollmentSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Student name cannot exceed 100 characters']
   },
+  // Full name (4 parts for Arabic names)
+  fullName: {
+    firstName: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'First name cannot exceed 50 characters']
+    },
+    secondName: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Second name cannot exceed 50 characters']
+    },
+    thirdName: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Third name cannot exceed 50 characters']
+    },
+    fourthName: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Fourth name cannot exceed 50 characters']
+    }
+  },
+  dateOfBirth: {
+    type: Date
+  },
   studentEmail: {
     type: String,
     required: [true, 'Student email is required'],
@@ -66,8 +92,44 @@ const enrollmentSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cash', 'free'],
+    enum: ['credit_card', 'debit_card', 'paypal', 'bank_transfer', 'cash', 'free', 'installment'],
     default: 'free'
+  },
+  // Payment installments tracking
+  paymentInstallments: {
+    totalInstallments: {
+      type: Number,
+      min: [1, 'Total installments must be at least 1'],
+      default: 1
+    },
+    paidInstallments: {
+      type: Number,
+      min: [0, 'Paid installments cannot be negative'],
+      default: 0
+    },
+    installmentSchedule: [{
+      installmentNumber: {
+        type: Number,
+        required: true,
+        min: [1, 'Installment number must be at least 1']
+      },
+      amount: {
+        type: Number,
+        required: true,
+        min: [0, 'Installment amount cannot be negative']
+      },
+      dueDate: {
+        type: Date
+      },
+      paidDate: {
+        type: Date
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'paid', 'overdue'],
+        default: 'pending'
+      }
+    }]
   },
   transactionId: {
     type: String,
@@ -78,10 +140,98 @@ const enrollmentSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Motivation cannot exceed 1000 characters']
   },
+  // Referral source
+  referralSource: {
+    type: String,
+    enum: ['social_media', 'church_announcement', 'friend', 'other'],
+    trim: true
+  },
+  referralSourceOther: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Other referral source cannot exceed 200 characters']
+  },
+  // Reference letter
+  referenceLetter: {
+    required: {
+      type: Boolean,
+      default: false
+    },
+    uploaded: {
+      type: Boolean,
+      default: false
+    },
+    fileUrl: {
+      type: String,
+      trim: true
+    },
+    pastorConfirmed: {
+      type: Boolean,
+      default: false
+    },
+    confirmationDate: {
+      type: Date
+    }
+  },
   experience: {
     type: String,
     trim: true,
     maxlength: [1000, 'Experience cannot exceed 1000 characters']
+  },
+  // Church information
+  churchInfo: {
+    churchName: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Church name cannot exceed 200 characters']
+    },
+    denomination: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Denomination cannot exceed 100 characters']
+    },
+    pastorName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Pastor name cannot exceed 100 characters']
+    },
+    pastorPhone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Pastor phone cannot exceed 20 characters']
+    },
+    sundaySchoolSupervisorName: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Sunday school supervisor name cannot exceed 100 characters']
+    },
+    servantPhone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Servant phone cannot exceed 20 characters']
+    }
+  },
+  // Service experience
+  serviceExperience: {
+    currentService: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Current service cannot exceed 500 characters']
+    },
+    hasServedWithChildren: {
+      type: Boolean,
+      default: false
+    },
+    serviceDuration: {
+      type: String,
+      trim: true,
+      maxlength: [100, 'Service duration cannot exceed 100 characters']
+    },
+    talentsOrSkills: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Talents or skills cannot exceed 500 characters']
+    }
   },
   expectations: {
     type: String,
@@ -93,10 +243,35 @@ const enrollmentSchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Previous education cannot exceed 500 characters']
   },
+  previousEducationDetails: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Previous education details cannot exceed 1000 characters']
+  },
+  hasPreviousEducation: {
+    type: Boolean,
+    default: false
+  },
   occupation: {
     type: String,
     trim: true,
     maxlength: [100, 'Occupation cannot exceed 100 characters']
+  },
+  // Education details
+  highestEducation: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Highest education cannot exceed 100 characters']
+  },
+  graduationYear: {
+    type: Number,
+    min: [1900, 'Graduation year must be after 1900'],
+    max: [new Date().getFullYear() + 10, 'Graduation year cannot be in the future']
+  },
+  currentJobOrStudy: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Current job or study cannot exceed 200 characters']
   },
   age: {
     type: Number,
@@ -108,6 +283,11 @@ const enrollmentSchema = new mongoose.Schema({
     enum: ['male', 'female', 'other', 'prefer_not_to_say'],
     default: 'prefer_not_to_say'
   },
+  maritalStatus: {
+    type: String,
+    enum: ['single', 'married', 'divorced', 'widowed', 'prefer_not_to_say'],
+    trim: true
+  },
   country: {
     type: String,
     trim: true,
@@ -117,6 +297,11 @@ const enrollmentSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [100, 'City cannot exceed 100 characters']
+  },
+  detailedAddress: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Detailed address cannot exceed 500 characters']
   },
   timezone: {
     type: String,

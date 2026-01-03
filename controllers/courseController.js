@@ -10,12 +10,18 @@ class CourseController {
         limit = 10,
         search = '',
         category,
+        subcategory,
         level,
         format,
         institution,
         priceRange,
         rating,
         status = 'published',
+        language,
+        featured,
+        instructor,
+        minAge,
+        maxAge,
         sortBy = 'createdAt',
         sortOrder = 'desc'
       } = req.query;
@@ -28,12 +34,18 @@ class CourseController {
         page: parseInt(page),
         limit: parseInt(limit),
         category,
+        subcategory,
         level,
         format,
         institution,
         priceRange,
         rating,
         status,
+        language,
+        featured,
+        instructor,
+        minAge,
+        maxAge,
         sortBy,
         sortOrder: sort
       };
@@ -52,16 +64,37 @@ class CourseController {
       if (search) {
         query.$or = [
           { title: { $regex: search, $options: 'i' } },
+          { titleAr: { $regex: search, $options: 'i' } },
+          { titleEn: { $regex: search, $options: 'i' } },
           { description: { $regex: search, $options: 'i' } },
+          { descriptionAr: { $regex: search, $options: 'i' } },
+          { descriptionEn: { $regex: search, $options: 'i' } },
+          { shortDescription: { $regex: search, $options: 'i' } },
+          { shortDescriptionAr: { $regex: search, $options: 'i' } },
+          { shortDescriptionEn: { $regex: search, $options: 'i' } },
           { instructor: { $regex: search, $options: 'i' } },
+          { instructorAr: { $regex: search, $options: 'i' } },
+          { instructorEn: { $regex: search, $options: 'i' } },
           { category: { $regex: search, $options: 'i' } },
-          { tags: { $in: [new RegExp(search, 'i')] } }
+          { categoryAr: { $regex: search, $options: 'i' } },
+          { categoryEn: { $regex: search, $options: 'i' } },
+          { subcategory: { $regex: search, $options: 'i' } },
+          { subcategoryAr: { $regex: search, $options: 'i' } },
+          { subcategoryEn: { $regex: search, $options: 'i' } },
+          { tags: { $in: [new RegExp(search, 'i')] } },
+          { prerequisites: { $in: [new RegExp(search, 'i')] } }
         ];
       }
       if (category && category !== 'all') query.category = category;
+      if (subcategory && subcategory !== 'all') query.subcategory = subcategory;
       if (level && level !== 'all') query.level = level;
       if (format && format !== 'all') query.format = format;
       if (institution && institution !== 'all') query['institution.name'] = institution;
+      if (language && language !== 'all') query.language = language;
+      if (featured !== undefined && featured !== 'all') query.featured = featured === 'true';
+      if (instructor && instructor !== 'all') query.instructor = instructor;
+      if (minAge && minAge !== 'all') query.minAge = { $gte: parseInt(minAge) };
+      if (maxAge && maxAge !== 'all') query.maxAge = { $lte: parseInt(maxAge) };
       if (priceRange && priceRange !== 'all') {
         switch (priceRange) {
           case 'free': query.price = 0; break;
@@ -171,6 +204,89 @@ class CourseController {
         courseData.shortDescription = courseData.description.substring(0, 300);
       }
 
+      // Set default values for new fields
+      if (!courseData.currency) {
+        courseData.currency = 'EGP';
+      }
+
+      if (!courseData.language) {
+        courseData.language = 'English';
+      }
+
+      if (!courseData.certification) {
+        courseData.certification = 'Certificate of Completion';
+      }
+
+      if (!courseData.status) {
+        courseData.status = 'draft';
+      }
+
+      // Handle nested objects with defaults
+      if (!courseData.studyStructure) {
+        courseData.studyStructure = {
+          semesters: 1,
+          hasSummerCourse: false,
+          hasGraduationProject: false,
+          hasGraduationCeremony: false
+        };
+      }
+
+      if (!courseData.attendancePolicy) {
+        courseData.attendancePolicy = {
+          allowedAbsencesPerMonth: 1,
+          dismissalAfterAbsences: 2,
+          requiresExcuse: true
+        };
+      }
+
+      if (!courseData.paymentInstallments) {
+        courseData.paymentInstallments = {
+          enabled: false,
+          numberOfInstallments: 1,
+          installmentAmount: 0
+        };
+      }
+
+      if (!courseData.weeklySchedule) {
+        courseData.weeklySchedule = {
+          day: '',
+          startTime: '',
+          endTime: '',
+          duration: 0,
+          platform: ''
+        };
+      }
+
+      // Ensure arrays are properly initialized
+      if (!courseData.prerequisites) {
+        courseData.prerequisites = [];
+      }
+
+      if (!courseData.tags) {
+        courseData.tags = [];
+      }
+
+      // Set percentage defaults based on format
+      if (!courseData.onlinePercentage && !courseData.offlinePercentage) {
+        switch (courseData.format) {
+          case 'online':
+            courseData.onlinePercentage = 100;
+            courseData.offlinePercentage = 0;
+            break;
+          case 'offline':
+            courseData.onlinePercentage = 0;
+            courseData.offlinePercentage = 100;
+            break;
+          case 'hybrid':
+            courseData.onlinePercentage = 50;
+            courseData.offlinePercentage = 50;
+            break;
+          default:
+            courseData.onlinePercentage = 100;
+            courseData.offlinePercentage = 0;
+        }
+      }
+
       const course = new Course(courseData);
       await course.save();
 
@@ -211,6 +327,12 @@ class CourseController {
         updatedBy: req.user?.id || req.body.updatedBy
       };
 
+      // Debug logging
+      console.log('Update course request:', {
+        id,
+        updateData: JSON.stringify(updateData, null, 2)
+      });
+
       // Remove fields that shouldn't be updated directly
       delete updateData.totalEnrollments;
       delete updateData.averageRating;
@@ -237,13 +359,25 @@ class CourseController {
       });
     } catch (error) {
       console.error('Error updating course:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
       
       if (error.name === 'ValidationError') {
-        const validationErrors = Object.values(error.errors).map(err => err.message);
+        const validationErrors = Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message,
+          value: err.value
+        }));
+        console.error('Validation errors:', validationErrors);
+        
         return res.status(400).json({
           status: 'error',
           message: 'Validation failed',
-          errors: validationErrors
+          errors: validationErrors.map(err => err.message),
+          details: validationErrors
         });
       }
 
@@ -457,6 +591,226 @@ class CourseController {
       res.status(500).json({
         status: 'error',
         message: 'Failed to fetch instructors',
+        error: error.message
+      });
+    }
+  }
+
+  // Get unique subcategories
+  async getSubcategories(req, res) {
+    try {
+      const { category } = req.query;
+      const query = { status: 'published' };
+      if (category && category !== 'all') {
+        query.category = category;
+      }
+      
+      const subcategories = await Course.distinct('subcategory', query);
+      
+      res.status(200).json({
+        status: 'success',
+        data: { subcategories: subcategories.filter(Boolean).sort() }
+      });
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch subcategories',
+        error: error.message
+      });
+    }
+  }
+
+  // Get unique languages
+  async getLanguages(req, res) {
+    try {
+      const languages = await Course.distinct('language', { status: 'published' });
+      
+      res.status(200).json({
+        status: 'success',
+        data: { languages: languages.filter(Boolean).sort() }
+      });
+    } catch (error) {
+      console.error('Error fetching languages:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch languages',
+        error: error.message
+      });
+    }
+  }
+
+  // Get all unique tags
+  async getTags(req, res) {
+    try {
+      const courses = await Course.find({ status: 'published' }, 'tags');
+      const allTags = courses.reduce((tags, course) => {
+        if (course.tags && Array.isArray(course.tags)) {
+          tags.push(...course.tags);
+        }
+        return tags;
+      }, []);
+      
+      const uniqueTags = [...new Set(allTags)].sort();
+      
+      res.status(200).json({
+        status: 'success',
+        data: { tags: uniqueTags }
+      });
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch tags',
+        error: error.message
+      });
+    }
+  }
+
+  // Toggle course featured status
+  async toggleFeatured(req, res) {
+    try {
+      const { id } = req.params;
+      
+      const course = await Course.findById(id);
+      
+      if (!course) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Course not found'
+        });
+      }
+
+      course.featured = !course.featured;
+      course.updatedBy = req.user?.id;
+      await course.save();
+
+      res.status(200).json({
+        status: 'success',
+        message: `Course ${course.featured ? 'featured' : 'unfeatured'} successfully`,
+        data: { course }
+      });
+    } catch (error) {
+      console.error('Error toggling featured status:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to toggle featured status',
+        error: error.message
+      });
+    }
+  }
+
+  // Get courses with advanced filtering
+  async getAdvancedCourses(req, res) {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        search = '',
+        categories = [],
+        subcategories = [],
+        levels = [],
+        formats = [],
+        languages = [],
+        priceMin,
+        priceMax,
+        ratingMin,
+        ageMin,
+        ageMax,
+        featured,
+        hasPrerequisites,
+        hasCertification,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+      } = req.query;
+
+      const query = { status: 'published' };
+
+      // Advanced search
+      if (search) {
+        query.$or = [
+          { title: { $regex: search, $options: 'i' } },
+          { titleAr: { $regex: search, $options: 'i' } },
+          { titleEn: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } },
+          { descriptionAr: { $regex: search, $options: 'i' } },
+          { descriptionEn: { $regex: search, $options: 'i' } },
+          { instructor: { $regex: search, $options: 'i' } },
+          { instructorAr: { $regex: search, $options: 'i' } },
+          { instructorEn: { $regex: search, $options: 'i' } },
+          { tags: { $in: [new RegExp(search, 'i')] } }
+        ];
+      }
+
+      // Array filters
+      if (categories.length > 0) query.category = { $in: categories };
+      if (subcategories.length > 0) query.subcategory = { $in: subcategories };
+      if (levels.length > 0) query.level = { $in: levels };
+      if (formats.length > 0) query.format = { $in: formats };
+      if (languages.length > 0) query.language = { $in: languages };
+
+      // Range filters
+      if (priceMin !== undefined || priceMax !== undefined) {
+        query.price = {};
+        if (priceMin !== undefined) query.price.$gte = parseFloat(priceMin);
+        if (priceMax !== undefined) query.price.$lte = parseFloat(priceMax);
+      }
+
+      if (ratingMin !== undefined) {
+        query.averageRating = { $gte: parseFloat(ratingMin) };
+      }
+
+      if (ageMin !== undefined || ageMax !== undefined) {
+        if (ageMin !== undefined) query.minAge = { $lte: parseInt(ageMin) };
+        if (ageMax !== undefined) query.maxAge = { $gte: parseInt(ageMax) };
+      }
+
+      // Boolean filters
+      if (featured !== undefined) query.featured = featured === 'true';
+      if (hasPrerequisites !== undefined) {
+        query.prerequisites = hasPrerequisites === 'true' 
+          ? { $exists: true, $not: { $size: 0 } }
+          : { $or: [{ $exists: false }, { $size: 0 }] };
+      }
+      if (hasCertification !== undefined) {
+        query.certification = hasCertification === 'true'
+          ? { $exists: true, $ne: '' }
+          : { $or: [{ $exists: false }, { $eq: '' }] };
+      }
+
+      const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const [courses, total] = await Promise.all([
+        Course.find(query)
+          .sort(sort)
+          .skip(skip)
+          .limit(parseInt(limit))
+          .populate('createdBy', 'name email'),
+        Course.countDocuments(query)
+      ]);
+
+      const totalPages = Math.ceil(total / parseInt(limit));
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          courses,
+          pagination: {
+            currentPage: parseInt(page),
+            totalPages,
+            totalCourses: total,
+            hasNextPage: parseInt(page) < totalPages,
+            hasPrevPage: parseInt(page) > 1,
+            limit: parseInt(limit)
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching advanced courses:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to fetch courses',
         error: error.message
       });
     }

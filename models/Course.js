@@ -7,16 +7,46 @@ const courseSchema = new mongoose.Schema({
     trim: true,
     maxlength: [200, 'Course title cannot exceed 200 characters']
   },
+  titleAr: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Arabic title cannot exceed 200 characters']
+  },
+  titleEn: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'English title cannot exceed 200 characters']
+  },
   description: {
     type: String,
     required: [true, 'Course description is required'],
     trim: true,
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
+  descriptionAr: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'Arabic description cannot exceed 2000 characters']
+  },
+  descriptionEn: {
+    type: String,
+    trim: true,
+    maxlength: [2000, 'English description cannot exceed 2000 characters']
+  },
   shortDescription: {
     type: String,
     trim: true,
     maxlength: [300, 'Short description cannot exceed 300 characters']
+  },
+  shortDescriptionAr: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'Arabic short description cannot exceed 300 characters']
+  },
+  shortDescriptionEn: {
+    type: String,
+    trim: true,
+    maxlength: [300, 'English short description cannot exceed 300 characters']
   },
   category: {
     type: String,
@@ -24,10 +54,30 @@ const courseSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Category cannot exceed 100 characters']
   },
+  categoryAr: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Arabic category cannot exceed 100 characters']
+  },
+  categoryEn: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'English category cannot exceed 100 characters']
+  },
   subcategory: {
     type: String,
     trim: true,
     maxlength: [100, 'Subcategory cannot exceed 100 characters']
+  },
+  subcategoryAr: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Arabic subcategory cannot exceed 100 characters']
+  },
+  subcategoryEn: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'English subcategory cannot exceed 100 characters']
   },
   level: {
     type: String,
@@ -51,6 +101,16 @@ const courseSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [100, 'Duration cannot exceed 100 characters']
+  },
+  durationAr: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Arabic duration cannot exceed 100 characters']
+  },
+  durationEn: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'English duration cannot exceed 100 characters']
   },
   price: {
     type: Number,
@@ -82,6 +142,16 @@ const courseSchema = new mongoose.Schema({
     trim: true,
     maxlength: [100, 'Instructor name cannot exceed 100 characters']
   },
+  instructorAr: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Arabic instructor name cannot exceed 100 characters']
+  },
+  instructorEn: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'English instructor name cannot exceed 100 characters']
+  },
   institution: {
     id: {
       type: String,
@@ -92,6 +162,16 @@ const courseSchema = new mongoose.Schema({
       required: [true, 'Institution name is required'],
       trim: true,
       maxlength: [200, 'Institution name cannot exceed 200 characters']
+    },
+    nameAr: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Arabic institution name cannot exceed 200 characters']
+    },
+    nameEn: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'English institution name cannot exceed 200 characters']
     },
     logo: {
       type: String,
@@ -185,6 +265,151 @@ const courseSchema = new mongoose.Schema({
     default: 'English',
     trim: true,
     maxlength: [50, 'Language cannot exceed 50 characters']
+  },
+  // Age requirements
+  minAge: {
+    type: Number,
+    min: [0, 'Minimum age cannot be negative']
+  },
+  maxAge: {
+    type: Number,
+    min: [0, 'Maximum age cannot be negative']
+  },
+  // Diploma/Program structure
+  diplomaLevels: [{
+    level: {
+      type: Number,
+      required: true,
+      min: [1, 'Level must be at least 1']
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: [200, 'Level title cannot exceed 200 characters']
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [1000, 'Level description cannot exceed 1000 characters']
+    }
+  }],
+  // Study hours and structure
+  totalHours: {
+    type: Number,
+    min: [0, 'Total hours cannot be negative']
+  },
+  onlinePercentage: {
+    type: Number,
+    min: [0, 'Online percentage cannot be negative'],
+    max: [100, 'Online percentage cannot exceed 100']
+  },
+  offlinePercentage: {
+    type: Number,
+    min: [0, 'Offline percentage cannot be negative'],
+    max: [100, 'Offline percentage cannot exceed 100']
+  },
+  studyStructure: {
+    semesters: {
+      type: Number,
+      min: [0, 'Number of semesters cannot be negative']
+    },
+    hasSummerCourse: {
+      type: Boolean,
+      default: false
+    },
+    hasGraduationProject: {
+      type: Boolean,
+      default: false
+    },
+    hasGraduationCeremony: {
+      type: Boolean,
+      default: false
+    }
+  },
+  // Weekly schedule details
+  weeklySchedule: {
+    day: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Day cannot exceed 20 characters']
+    },
+    startTime: {
+      type: String,
+      trim: true,
+      maxlength: [10, 'Start time cannot exceed 10 characters']
+    },
+    endTime: {
+      type: String,
+      trim: true,
+      maxlength: [10, 'End time cannot exceed 10 characters']
+    },
+    duration: {
+      type: Number, // in minutes
+      min: [0, 'Duration cannot be negative']
+    },
+    platform: {
+      type: String,
+      trim: true,
+      maxlength: [50, 'Platform cannot exceed 50 characters']
+    }
+  },
+  // Attendance policy
+  attendancePolicy: {
+    allowedAbsencesPerMonth: {
+      type: Number,
+      default: 1,
+      min: [0, 'Allowed absences cannot be negative']
+    },
+    dismissalAfterAbsences: {
+      type: Number,
+      default: 2,
+      min: [0, 'Dismissal threshold cannot be negative']
+    },
+    requiresExcuse: {
+      type: Boolean,
+      default: true
+    }
+  },
+  // Payment and pricing
+  paymentInstallments: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    numberOfInstallments: {
+      type: Number,
+      min: [1, 'Number of installments must be at least 1'],
+      default: 1
+    },
+    installmentAmount: {
+      type: Number,
+      min: [0, 'Installment amount cannot be negative']
+    }
+  },
+  discountedPrice: {
+    type: Number,
+    min: [0, 'Discounted price cannot be negative']
+  },
+  actualPrice: {
+    type: Number,
+    min: [0, 'Actual price cannot be negative']
+  },
+  // Requirements
+  requiresReferenceLetter: {
+    type: Boolean,
+    default: false
+  },
+  referenceLetterFrom: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Reference letter from cannot exceed 100 characters']
+  },
+  // Certificate issuer
+  certificateIssuer: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'Certificate issuer cannot exceed 200 characters']
   },
   tags: [{
     type: String,
