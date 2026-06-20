@@ -7,7 +7,9 @@ require('dotenv').config();
 // Connect to MongoDB
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hope-for-all-mena');
+    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hope-for-all-mena', {
+      dbName: process.env.DB_NAME || 'azino_publishing'
+    });
     console.log('✅ MongoDB connected successfully');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);

@@ -1,11 +1,11 @@
+require('dotenv').config();
 const mongoose = require('mongoose');
 const Blog = require('../models/Blog');
 const User = require('../models/User');
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/hope-for-all-mena', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+  dbName: process.env.DB_NAME || 'azino_publishing',
 });
 
 const sampleBlogs = [

@@ -2,29 +2,6 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const mongoose = require('mongoose');
 
-// Session configuration
-const sessionConfig = {
-  secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
-  resave: true, // Force session save even if not modified
-  saveUninitialized: true, // Save uninitialized sessions
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/azino_publishing',
-    dbName: process.env.DB_NAME || 'azino_publishing',
-    touchAfter: 24 * 3600, // lazy session update (24 hours)
-    ttl: 7 * 24 * 60 * 60, // session expires in 7 days
-    autoRemove: 'native', // automatically remove expired sessions
-    autoIndex: false, // disable automatic index creation
-    stringify: false, // store as BSON
-  }),
-  cookie: {
-    secure: false, // Set to false for development (localhost)
-    httpOnly: true, // prevent XSS attacks
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    sameSite: 'lax', // More permissive for development
-  },
-  name: 'hope-for-all-session', // custom session name
-};
-
 // Session middleware factory
 const createSessionMiddleware = () => {
   // Ensure MongoDB connection is established before creating session store
@@ -32,6 +9,37 @@ const createSessionMiddleware = () => {
     console.warn('⚠️  MongoDB not connected when creating session middleware');
   }
   
+  // Build config at runtime so env vars are loaded
+  const sessionConfig = {
+    secret: process.env.SESSION_SECRET || 'your-super-secret-session-key-change-in-production',
+    resave: true, // Force session save even if not modified
+    saveUninitialized: true, // Save uninitialized sessions
+    cookie: {
+      secure: false, // Set to false for development (localhost)
+      httpOnly: true, // prevent XSS attacks
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      sameSite: 'lax', // More permissive for development
+    },
+    name: 'hope-for-all-session', // custom session name
+  };
+
+  const canUseMongoStore = mongoose.connection.readyState === 1;
+  if (canUseMongoStore) {
+    const client = mongoose.connection?.getClient?.();
+    sessionConfig.store = MongoStore.create({
+      ...(client ? { clientPromise: Promise.resolve(client) } : { mongoUrl: process.env.MONGODB_URI }),
+      dbName: process.env.DB_NAME || 'azino_publishing',
+      touchAfter: 24 * 3600, // lazy session update (24 hours)
+      ttl: 7 * 24 * 60 * 60, // session expires in 7 days
+      autoRemove: 'native', // automatically remove expired sessions
+      autoIndex: false, // disable automatic index creation
+      stringify: false, // store as BSON
+    });
+  } else {
+    console.warn('⚠️  Using in-memory session store (Mongo not connected).');
+    // No `store` -> MemoryStore (development fallback). Not for production.
+  }
+
   return session(sessionConfig);
 };
 
@@ -135,7 +143,6 @@ const sessionUtils = {
 };
 
 module.exports = {
-  sessionConfig,
   createSessionMiddleware,
   sessionUtils
 };

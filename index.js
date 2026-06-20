@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -6,7 +7,6 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { createSessionMiddleware } = require('./config/session');
 const { createCookieParser } = require('./utils/cookies');
-require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -20,6 +20,7 @@ const magazineRequestRoutes = require('./routes/magazineRequests');
 const trainingBookRoutes = require('./routes/trainingBooks');
 const trainingRequestRoutes = require('./routes/trainingRequests');
 const trainingFollowUpRoutes = require('./routes/trainingFollowUps');
+const developmentProjectRequestRoutes = require('./routes/developmentProjectRequests');
 const uploadRoutes = require('./routes/upload');
 const eventRoutes = require('./routes/events');
 const courseRoutes = require('./routes/courses');
@@ -94,46 +95,11 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Cookie parsing middleware
 app.use(createCookieParser());
 
-// Session middleware
-app.use(createSessionMiddleware());
-
 // Static file serving for uploads
 app.use('/uploads', express.static('uploads'));
 
 // Logging middleware
 app.use(morgan('combined'));
-
-// Database connection
-mongoose.connect(process.env.MONGODB_URI, {
-  dbName: process.env.DB_NAME || 'azino_publishing'
-})
-.then(() => {
-  console.log('✅ Connected to MongoDB successfully');
-  console.log('📊 Database:', mongoose.connection.db.databaseName);
-})
-.catch((error) => {
-  console.error('❌ MongoDB connection error:', error);
-  process.exit(1);
-});
-
-// Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/authors', authorRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/books', bookRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/contact-messages', contactMessageRoutes);
-app.use('/api/magazine-requests', magazineRequestRoutes);
-app.use('/api/training-books', trainingBookRoutes);
-app.use('/api/training-requests', trainingRequestRoutes);
-app.use('/api/training-follow-ups', trainingFollowUpRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/blogs', blogRoutes);
-app.use('/api/courses', courseRoutes);
-app.use('/api/enrollments', enrollmentRoutes);
-app.use('/api/fact-counter', factCounterRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -142,25 +108,6 @@ app.get('/api/health', (req, res) => {
     message: 'Azino Publishing House API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV
-  });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: `Route ${req.originalUrl} not found`
-  });
-});
-
-// Global error handler
-app.use((error, req, res, next) => {
-  console.error('Global error handler:', error);
-  
-  res.status(error.statusCode || 500).json({
-    status: 'error',
-    message: error.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
   });
 });
 
@@ -187,13 +134,112 @@ process.on('SIGTERM', () => {
   });
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-});
+async function start() {
+  try {
+    const dbName = process.env.DB_NAME || 'azino_publishing';
+    const primaryUri = process.env.MONGODB_URI;
+    if (!primaryUri) {
+      throw new Error('MONGODB_URI is not set');
+    }
 
-// Handle server errors
-server.on('error', (error) => {
-  console.error('❌ Server error:', error);
-});
+    try {
+      await mongoose.connect(primaryUri, { dbName });
+    } catch (error) {
+      const isDev = process.env.NODE_ENV === 'development';
+      const isSrv = typeof primaryUri === 'string' && primaryUri.startsWith('mongodb+srv://');
+      const isSrvDnsError =
+        (error?.code === 'ECONNREFUSED' || error?.code === 'ENOTFOUND' || error?.code === 'ETIMEOUT') &&
+        typeof error?.hostname === 'string' &&
+        error.hostname.includes('_mongodb._tcp');
+
+      if (isDev && isSrv && isSrvDnsError) {
+        const fallbackUri =
+          process.env.MONGODB_URI_LOCAL || `mongodb://127.0.0.1:27017/${dbName}`;
+        console.warn('⚠️  MongoDB SRV lookup failed. Falling back to local MongoDB.');
+        console.warn('⚠️  Fallback URI:', fallbackUri);
+        try {
+          await mongoose.connect(fallbackUri, { dbName });
+        } catch (fallbackError) {
+          console.error('❌ Local MongoDB fallback failed. Starting API without DB.');
+          console.error(fallbackError);
+        }
+      } else {
+        console.error('❌ MongoDB connection failed. Starting API without DB.');
+        console.error(error);
+      }
+    }
+
+    const isDbConnected = mongoose.connection.readyState === 1;
+    if (isDbConnected) {
+      console.log('✅ Connected to MongoDB successfully');
+      console.log('📊 Database:', mongoose.connection.db.databaseName);
+    }
+
+    // Session middleware (falls back to MemoryStore if DB is down)
+    app.use(createSessionMiddleware());
+
+    const requireDb = (req, res, next) => {
+      if (mongoose.connection.readyState !== 1) {
+        return res.status(503).json({
+          status: 'error',
+          message: 'Database unavailable. Please try again later.'
+        });
+      }
+      next();
+    };
+
+    // Routes
+    app.use('/api/auth', authRoutes);
+    app.use('/api/users', requireDb, userRoutes);
+    app.use('/api/authors', requireDb, authorRoutes);
+    app.use('/api/categories', requireDb, categoryRoutes);
+    app.use('/api/books', requireDb, bookRoutes);
+    app.use('/api/reviews', requireDb, reviewRoutes);
+    app.use('/api/contact-messages', requireDb, contactMessageRoutes);
+    app.use('/api/magazine-requests', requireDb, magazineRequestRoutes);
+    app.use('/api/training-books', requireDb, trainingBookRoutes);
+    app.use('/api/training-requests', requireDb, trainingRequestRoutes);
+    app.use('/api/training-follow-ups', requireDb, trainingFollowUpRoutes);
+    app.use('/api/development-project-requests', requireDb, developmentProjectRequestRoutes);
+    app.use('/api/upload', uploadRoutes);
+    app.use('/api/events', requireDb, eventRoutes);
+    app.use('/api/blogs', requireDb, blogRoutes);
+    app.use('/api/courses', requireDb, courseRoutes);
+    app.use('/api/enrollments', requireDb, enrollmentRoutes);
+    app.use('/api/fact-counter', requireDb, factCounterRoutes);
+
+    // 404 handler (must be AFTER routes)
+    app.use('*', (req, res) => {
+      res.status(404).json({
+        status: 'error',
+        message: `Route ${req.originalUrl} not found`
+      });
+    });
+
+    // Global error handler (after routes)
+    app.use((error, req, res, next) => {
+      console.error('Global error handler:', error);
+
+      res.status(error.statusCode || 500).json({
+        status: 'error',
+        message: error.message || 'Internal server error',
+        ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+      });
+    });
+
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+    });
+
+    server.on('error', (error) => {
+      console.error('❌ Server error:', error);
+    });
+  } catch (error) {
+    console.error('❌ Startup error:', error);
+    process.exit(1);
+  }
+}
+
+start();
