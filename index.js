@@ -30,6 +30,9 @@ const blogRoutes = require('./routes/blogRoutes');
 
 const app = express();
 
+// Vercel sits in front of the app as a single reverse proxy, so trust its X-Forwarded-For header.
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet());
 
