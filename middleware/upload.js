@@ -1,10 +1,15 @@
 const multer = require('multer');
 const path = require('path');
+const os = require('os');
 const { randomUUID } = require('crypto');
 const fs = require('fs');
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../uploads/project-requests');
+// Vercel's deployment bundle (__dirname) is read-only; only os.tmpdir() is writable there.
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const uploadDir = isServerless
+  ? path.join(os.tmpdir(), 'uploads/project-requests')
+  : path.join(__dirname, '../uploads/project-requests');
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
