@@ -15,6 +15,8 @@ async function checkDatabase() {
       dbName: dbName
     });
     
+
+    
     console.log('✅ Connected to MongoDB');
     console.log('Current database:', mongoose.connection.db.databaseName);
     
