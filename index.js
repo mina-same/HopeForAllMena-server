@@ -33,6 +33,15 @@ const app = express();
 // Vercel sits in front of the app as a single reverse proxy, so trust its X-Forwarded-For header.
 app.set('trust proxy', 1);
 
+// Route mounting happens asynchronously inside start() (after the DB connect attempt).
+// module.exports = app happens synchronously at import, so a request can otherwise land
+// on a cold container before any routes exist. Hold every request until start() has
+// finished mounting routes, so none ever falls through to Express's default 404 page.
+let readyPromise;
+app.use((req, res, next) => {
+  readyPromise.then(() => next(), next);
+});
+
 // Security middleware
 app.use(helmet());
 
@@ -245,6 +254,6 @@ async function start() {
   }
 }
 
-start();
+readyPromise = start();
 
 module.exports = app;
