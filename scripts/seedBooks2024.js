@@ -4,7 +4,7 @@ const Author = require('../models/Author');
 const Category = require('../models/Category');
 const Book = require('../models/Book');
 
-const data = require('../../client/src/assets/images/2024/books2024-with-cloudinary.json');
+const data = require('../../HopeForAllMena-client/src/assets/images/2024/books2024-with-cloudinary.json');
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.DB_NAME || 'azino_publishing';
