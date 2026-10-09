@@ -46,6 +46,7 @@ const createTrainingRequest = async (req, res) => {
   try {
     const {
       name,
+      phoneNumber,
       churchName,
       churchAddress,
       serviceType,
@@ -58,6 +59,7 @@ const createTrainingRequest = async (req, res) => {
 
     const trainingRequest = new TrainingRequest({
       name,
+      phoneNumber,
       churchName,
       churchAddress,
       serviceType,

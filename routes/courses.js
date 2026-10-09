@@ -1,12 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const courseController = require('../controllers/courseController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 
 // @route   GET /api/courses
 // @desc    Get all courses with pagination and filtering
 // @access  Public
 router.get('/', 
+  optionalAuth,
   courseController.getCourses
 );
 

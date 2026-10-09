@@ -45,13 +45,13 @@ app.use((req, res, next) => {
 // Security middleware
 app.use(helmet());
 
-// Rate limiting - More lenient for development
+// Rate limiting. The admin panel makes ~20 API calls per page view, so a low limit locks
+// admins out; login/password routes have their own stricter limiter.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit for development
+  max: 1000,
   message: 'Too many requests from this IP, please try again later.'
 });
-app.use('/api', limiter);
 
 // CORS configuration - Enhanced for better compatibility
 const corsOptions = {
@@ -97,6 +97,10 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Applied after CORS so rate-limited responses still carry CORS headers and the
+// browser shows a readable 429 instead of a generic network error
+app.use('/api', limiter);
+
 // Additional CORS handling for preflight requests
 app.options('*', cors(corsOptions));
 
@@ -132,9 +136,11 @@ process.on('uncaughtException', (error) => {
 });
 
 // Handle unhandled promise rejections
+// Log only: exiting here let a single failed upload take the whole API down. Cloudinary's
+// SDK rejects an internal promise on upload errors (e.g. an invalid PDF) even though our
+// callback already handled the error, so these rejections are not fatal.
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
 });
 
 // Graceful shutdown

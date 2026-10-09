@@ -1,5 +1,16 @@
 const mongoose = require('mongoose');
 
+// Reads another field inside a validator. In update validators (findByIdAndUpdate with
+// runValidators) `this` is the Query, not the document, so read from the update instead.
+// Returns undefined when the field isn't part of the update (the check is then skipped).
+const siblingValue = (ctx, field) => {
+  if (ctx instanceof mongoose.Query) {
+    const update = ctx.getUpdate() || {};
+    return update[field] !== undefined ? update[field] : (update.$set || {})[field];
+  }
+  return ctx[field];
+};
+
 const eventSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -21,7 +32,8 @@ const eventSchema = new mongoose.Schema({
     required: [true, 'End date is required'],
     validate: {
       validator: function(value) {
-        return value > this.start;
+        const start = siblingValue(this, 'start');
+        return start === undefined || new Date(value) > new Date(start);
       },
       message: 'End date must be after start date'
     }

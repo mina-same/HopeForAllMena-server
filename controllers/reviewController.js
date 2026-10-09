@@ -355,7 +355,7 @@ class ReviewController {
       }
 
       // Check if user owns this review or is admin
-      const isOwner = review.user.toString() === userId.toString();
+      const isOwner = !!review.user && review.user.toString() === userId.toString(); // guest reviews have no user
       const isAdmin = req.user.role?.toLowerCase().includes('admin') || 
                      req.user.permissions?.includes('reviews');
 
@@ -433,7 +433,7 @@ class ReviewController {
       }
 
       // Check if user owns this review or is admin
-      const isOwner = review.user.toString() === userId.toString();
+      const isOwner = !!review.user && review.user.toString() === userId.toString(); // guest reviews have no user
       const isAdmin = req.user.role?.toLowerCase().includes('admin') || 
                      req.user.permissions?.includes('reviews');
 

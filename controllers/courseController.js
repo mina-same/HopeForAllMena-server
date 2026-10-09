@@ -1,6 +1,26 @@
 const Course = require('../models/Course');
 const User = require('../models/User');
 
+// The admin course form has no institution picker, so courses default to the ministry itself
+const DEFAULT_INSTITUTION = {
+  id: 'hope-for-all-mena',
+  name: 'Hope For All MENA',
+  nameAr: 'الرجاء للجميع',
+  nameEn: 'Hope For All MENA',
+  logo: '',
+  website: ''
+};
+
+const withInstitution = (data) => {
+  if (!data.institution || !data.institution.name) {
+    return { ...data, institution: { ...DEFAULT_INSTITUTION } };
+  }
+  if (!data.institution.id) {
+    return { ...data, institution: { ...data.institution, id: data.institution.name.toLowerCase().replace(/\s+/g, '-') } };
+  }
+  return data;
+};
+
 class CourseController {
   // Get all courses with pagination and filtering
   async getCourses(req, res) {
@@ -40,7 +60,8 @@ class CourseController {
         institution,
         priceRange,
         rating,
-        status,
+        // Only logged-in staff may list draft/archived courses ('all' = every status)
+        status: req.user ? status : 'published',
         language,
         featured,
         instructor,
@@ -179,10 +200,10 @@ class CourseController {
   // Create new course
   async createCourse(req, res) {
     try {
-      const courseData = {
+      const courseData = withInstitution({
         ...req.body,
         createdBy: req.user?.id || req.body.createdBy
-      };
+      });
 
       // Validate required fields
       const requiredFields = ['title', 'description', 'category', 'level', 'format', 'price', 'startDate', 'instructor', 'institution', 'maxStudents'];
@@ -326,6 +347,11 @@ class CourseController {
         ...req.body,
         updatedBy: req.user?.id || req.body.updatedBy
       };
+
+      // Don't overwrite a stored institution with the form's empty placeholder
+      if (updateData.institution && !updateData.institution.name) {
+        delete updateData.institution;
+      }
 
       // Debug logging
       console.log('Update course request:', {

@@ -76,15 +76,33 @@ const blogSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Create slug from title before saving
-blogSchema.pre('save', function(next) {
-  if (this.isModified('title')) {
-    this.slug = this.title
-      .toLowerCase()
-      .replace(/[^\w ]+/g, '')
-      .replace(/ +/g, '-');
+// Create a unique slug from the title. Runs before validation because `slug` is required
+// and Mongoose validates before 'save' hooks run.
+blogSchema.pre('validate', async function(next) {
+  try {
+    if (this.isModified('title') || !this.slug) {
+      let base = (this.title || '')
+        .toLowerCase()
+        .replace(/[^\w ]+/g, '')
+        .trim()
+        .replace(/ +/g, '-');
+      // Titles with no Latin letters (e.g. Arabic only) would otherwise give an empty slug
+      if (!base) base = `post-${Date.now().toString(36)}`;
+
+      let slug = base;
+      let n = 2;
+      while (await this.constructor.exists({ slug, _id: { $ne: this._id } })) {
+        slug = `${base}-${n++}`;
+      }
+      this.slug = slug;
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
-  
+});
+
+blogSchema.pre('save', function(next) {
   // Set publishedAt when status changes to published
   if (this.isModified('status') && this.status === 'published' && !this.publishedAt) {
     this.publishedAt = new Date();

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const reviewController = require('../controllers/reviewController');
-const { authenticate } = require('../middleware/auth');
+const { authenticate, optionalAuth } = require('../middleware/auth');
 const { 
   validateReviewCreation, 
   validateReviewUpdate, 
@@ -65,14 +65,8 @@ router.get('/:id',
 // @desc    Create new review
 // @access  Public (Authenticated users or guests)
 router.post('/', 
-  (req, res, next) => {
-    // Make authentication optional for review creation
-    if (req.headers.authorization) {
-      authenticate(req, res, next);
-    } else {
-      next();
-    }
-  },
+  // Logged-in users review as themselves; everyone else (including an expired token) as a guest
+  optionalAuth,
   validateReviewCreation,
   reviewController.createReview
 );

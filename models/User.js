@@ -64,7 +64,8 @@ const userSchema = new mongoose.Schema({
       'calendar',
       'user-management',
       'generate-ids',
-      'blogs'
+      'blogs',
+      'development-requests'
     ]
   }],
   status: {

@@ -148,9 +148,28 @@ const sensitiveOperationLimit = (maxAttempts = 5, windowMs = 15 * 60 * 1000) => 
   };
 };
 
+// Attaches req.user when a valid token is present, but never rejects the request.
+// Used by public endpoints that show extra data (e.g. draft courses) to logged-in staff.
+const optionalAuth = async (req, res, next) => {
+  try {
+    const token = getRequestToken(req);
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.userId);
+      if (user && user.status === 'active') {
+        req.user = user;
+      }
+    }
+  } catch (error) {
+    // Invalid or expired token: treat as an anonymous visitor
+  }
+  return next();
+};
+
 module.exports = {
   generateToken,
   authenticate,
+  optionalAuth,
   authorize,
   requireAdmin,
   authorizeUserAccess,

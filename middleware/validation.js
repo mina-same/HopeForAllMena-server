@@ -179,7 +179,7 @@ const validateUserCreation = [
         'books', 'courses', 'magazines', 'training', 'users', 'analytics', 'settings',
         'authors', 'categories', 'reviews', 'enrollments', 'contact-messages',
         'training-books', 'training-requests', 'training-followup-requests',
-        'calendar', 'user-management', 'generate-ids'
+        'calendar', 'user-management', 'generate-ids', 'blogs', 'development-requests'
       ];
       
       const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
@@ -245,7 +245,7 @@ const validateUserUpdate = [
         'books', 'courses', 'magazines', 'training', 'users', 'analytics', 'settings',
         'authors', 'categories', 'reviews', 'enrollments', 'contact-messages',
         'training-books', 'training-requests', 'training-followup-requests',
-        'calendar', 'user-management', 'generate-ids'
+        'calendar', 'user-management', 'generate-ids', 'blogs', 'development-requests'
       ];
       
       const invalidPermissions = permissions.filter(p => !validPermissions.includes(p));
