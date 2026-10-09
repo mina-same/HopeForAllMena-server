@@ -11,8 +11,9 @@ const {
 
 // @route   GET /api/contact-messages
 // @desc    Get all contact messages with pagination and filtering
-// @access  Public (for admin dashboard)
+// @access  Private (Admin only)
 router.get('/', 
+  authenticate, 
   validatePagination,
   contactMessageController.getContactMessages
 );
@@ -71,16 +72,18 @@ router.put('/:id',
 
 // @route   DELETE /api/contact-messages/:id
 // @desc    Delete contact message
-// @access  Public (for admin dashboard)
+// @access  Private (Admin only)
 router.delete('/:id', 
+  authenticate, 
   validateContactMessageId,
   contactMessageController.deleteContactMessage
 );
 
 // @route   PATCH /api/contact-messages/:id/status
 // @desc    Update contact message status
-// @access  Public (for admin dashboard)
+// @access  Private (Admin only)
 router.patch('/:id/status', 
+  authenticate, 
   validateContactMessageId,
   contactMessageController.updateContactMessageStatus
 );
