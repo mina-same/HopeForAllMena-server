@@ -86,14 +86,14 @@ router.route('/')
   .get(getAllEvents)
   .post(eventValidation, createEvent);
 
+// Named endpoints must come before '/:id' or they are treated as event IDs
+router.get('/upcoming', getUpcomingEvents);
+router.get('/date-range', getEventsByDateRange);
+router.get('/stats', getEventStats);
+
 router.route('/:id')
   .get(getEvent)
   .put(eventValidation, updateEvent)
   .delete(deleteEvent);
-
-// Additional endpoints
-router.get('/upcoming', getUpcomingEvents);
-router.get('/date-range', getEventsByDateRange);
-router.get('/stats', getEventStats);
 
 module.exports = router;
