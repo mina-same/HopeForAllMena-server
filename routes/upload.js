@@ -6,6 +6,7 @@ const {
   uploadBookCover, 
   uploadTrainingBookCover,
   uploadCourseImage,
+  uploadEventImage,
   deleteImage 
 } = require('../controllers/uploadController');
 const { authenticate } = require('../middleware/auth');
@@ -24,6 +25,9 @@ router.post('/training-book-cover', upload.single('image'), uploadTrainingBookCo
 
 // Upload course image
 router.post('/course-image', upload.single('image'), uploadCourseImage);
+
+// Upload event image
+router.post('/single', upload.single('image'), uploadEventImage);
 
 // Delete image
 router.delete('/image', deleteImage);

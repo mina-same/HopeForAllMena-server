@@ -200,6 +200,47 @@ const uploadCourseImage = async (req, res) => {
   }
 };
 
+// Upload event image (used by the Events admin section and the Calendar)
+const uploadEventImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: 'azino/events',
+      public_id: `event_${Date.now()}`,
+      transformation: [
+        { width: 1600, crop: 'limit' },
+        { quality: 'auto', fetch_format: 'auto' }
+      ]
+    });
+
+    res.json({
+      success: true,
+      message: 'Event image uploaded successfully',
+      imageUrl: result.secure_url,
+      public_id: result.public_id,
+      data: {
+        url: result.secure_url,
+        public_id: result.public_id,
+        width: result.width,
+        height: result.height
+      }
+    });
+  } catch (error) {
+    console.error('Event image upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload event image',
+      error: error.message
+    });
+  }
+};
+
 // Delete image from Cloudinary
 const deleteImage = async (req, res) => {
   try {
@@ -235,5 +276,6 @@ module.exports = {
   uploadBookCover,
   uploadTrainingBookCover,
   uploadCourseImage,
+  uploadEventImage,
   deleteImage
 };

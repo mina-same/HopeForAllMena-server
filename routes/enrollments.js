@@ -5,8 +5,9 @@ const { authenticate } = require('../middleware/auth');
 
 // @route   GET /api/enrollments
 // @desc    Get all enrollments with pagination and filtering
-// @access  Public (for basic enrollment data)
+// @access  Private (Admin only) - contains applicants' personal data
 router.get('/', 
+  authenticate, 
   enrollmentController.getEnrollments
 );
 
@@ -20,8 +21,9 @@ router.get('/stats',
 
 // @route   GET /api/enrollments/course/:courseId
 // @desc    Get enrollments by course
-// @access  Public (for course enrollment display)
+// @access  Private (Admin only) - contains applicants' personal data
 router.get('/course/:courseId', 
+  authenticate, 
   enrollmentController.getEnrollmentsByCourse
 );
 
