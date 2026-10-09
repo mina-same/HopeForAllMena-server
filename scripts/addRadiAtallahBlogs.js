@@ -27,7 +27,7 @@ const toArabicParagraphs = (text) => {
 };
 const slugify = (title) => title.toLowerCase().replace(/[^\w ]+/g, '').replace(/ +/g, '-');
 
-const posts = [
+const firstBatch = [
   {
     title: 'Not Every Spirit Is from God',
     titleAr: 'ليس كل روحٍ من الله',
@@ -461,6 +461,9 @@ Rev. Radi Atallah`,
 القس راضي عطالله`
   }
 ];
+
+// Newest first: publishedAt is staggered by array position.
+const posts = [...require("./data/radiAtallahPosts2"), ...firstBatch];
 
 const ALL_PERMISSIONS = User.schema.path('permissions').caster.enumValues;
 
